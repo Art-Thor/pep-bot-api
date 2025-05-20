@@ -16,11 +16,12 @@ def run_legacy():
         shutil.rmtree(LEGACY_DIR)
     os.makedirs(LEGACY_ART_DIR, exist_ok=True)
 
-    # Get the directory containing this script
+    # Get the directory containing this script and the script_old directory
     base = os.path.dirname(__file__)
+    script_old_dir = os.path.join(base, 'script_old')
 
     # 2) Dump from Jira using old data_loader
-    loader = os.path.join(base, 'data_loader.py')
+    loader = os.path.join(script_old_dir, 'data_loader.py')
     if not os.path.exists(loader):
         raise FileNotFoundError(f"Legacy data loader not found: {loader}")
     
@@ -31,7 +32,7 @@ def run_legacy():
     ], check=True)
 
     # 3) Run legacy report generator
-    report = os.path.join(base, 'legacy_report.py')
+    report = os.path.join(script_old_dir, 'main.py')  # Using main.py as the report generator
     if not os.path.exists(report):
         raise FileNotFoundError(f"Legacy report generator not found: {report}")
     

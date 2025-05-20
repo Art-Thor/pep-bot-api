@@ -80,16 +80,13 @@ def plot_priority_pie(df):
     # Get colors for the priorities
     colors = [priority_colors.get(label, '#95A5A6') for label in priority_labels]
 
-    plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(8, 8))
     plt.pie(priority_counts, labels=priority_labels, colors=colors, autopct='%1.1f%%', startangle=140)
     plt.title('Alert Distribution by Priority Levels')
     plt.axis('equal')  # Make the pie chart circular
     plt.tight_layout()
 
-    # Save the plot
-    figures_dir = create_figures_dir()
-    plt.savefig(os.path.join(figures_dir, 'priority_pie_chart.png'))
-    plt.close()
+    return fig
 
 def plot_alert_types(df):
     """
@@ -115,7 +112,7 @@ def plot_alert_types_with_priority(df):
     # Exclude user-side requests
     df_filtered = df[~df['Alert Type'].isin(user_request_types)]
 
-    _plot_alerts_by_priority(
+    return _plot_alerts_by_priority(
         df_filtered,
         'alert_types_with_priority.png',
         "Number of Alerts by Types and Priorities"
@@ -128,7 +125,7 @@ def plot_user_requests_by_priority(df):
     # Include only user-side requests
     df_filtered = df[df['Alert Type'].isin(user_request_types)]
 
-    _plot_alerts_by_priority(
+    return _plot_alerts_by_priority(
         df_filtered,
         'user_requests_with_priority.png',
         "User Requests by Types and Priorities"
@@ -148,7 +145,7 @@ def _plot_alerts_by_priority(df, filename, title):
 
     # Dynamically set the figure height based on the number of alert types
     num_alert_types = len(alert_priority_pivot.index)
-    plt.figure(figsize=(12, max(6, num_alert_types * 0.5)))
+    fig = plt.figure(figsize=(12, max(6, num_alert_types * 0.5)))
 
     # Get the priority levels in the correct order
     priority_levels = ['P1', 'P2', 'P3', 'Cancelled', 'Other']
@@ -179,10 +176,7 @@ def _plot_alerts_by_priority(df, filename, title):
     # Move the legend outside the plot
     plt.legend(title='Priority', bbox_to_anchor=(1.0, 1), loc='upper left', fontsize=12)
 
-    # Save the plot
-    figures_dir = create_figures_dir()
-    plt.savefig(os.path.join(figures_dir, filename), bbox_inches='tight')
-    plt.close()
+    return fig
 
 def plot_priority_levels(df):
     """
@@ -211,10 +205,8 @@ def plot_priority_levels(df):
     plt.ylabel('Count')
     plt.tight_layout()
 
-    # Save the plot
-    figures_dir = create_figures_dir()
-    plt.savefig(os.path.join(figures_dir, 'priority_levels.png'))
-    plt.close()
+    # Return the figure instead of saving it
+    return plt.gcf()
 
 def plot_p1_alerts(df):
     """
@@ -224,10 +216,10 @@ def plot_p1_alerts(df):
 
     if p1_alerts.empty:
         print("No P1 alerts.")
-        return
+        return None
 
     # Create a table using matplotlib
-    plt.figure(figsize=(12, len(p1_alerts) * 0.5 + 1))
+    fig = plt.figure(figsize=(12, len(p1_alerts) * 0.5 + 1))
     plt.axis('off')
     table = plt.table(cellText=p1_alerts.values, colLabels=p1_alerts.columns, loc='center', cellLoc='left')
     table.auto_set_font_size(False)
@@ -237,7 +229,4 @@ def plot_p1_alerts(df):
     plt.title('List of P1 Alerts')
     plt.tight_layout()
 
-    # Save the image
-    figures_dir = create_figures_dir()
-    plt.savefig(os.path.join(figures_dir, 'p1_alerts.png'))
-    plt.close()
+    return fig
