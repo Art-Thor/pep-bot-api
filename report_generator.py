@@ -169,6 +169,26 @@ class ReportGenerator:
         story.append(Image(ns_chart, width=6*inch, height=3*inch))
         story.append(Spacer(1, 12))
 
+        # Wiz Alerts, AWS GuardDuty, Snyk
+        src_counts = jira_handler.get_source_alert_counts()
+        series = pd.Series(src_counts)
+
+        fig, ax = plt.subplots(figsize=(6, 3))
+        series.plot.bar(ax=ax, color=['#4C72B0', '#55A868', '#C44E52'])
+        ax.set_title('Wiz Alerts, AWS GuardDuty, Snyk')
+        ax.set_xlabel('')
+        ax.set_ylabel('Count')
+        plt.xticks(rotation=0)
+        fig.tight_layout()
+
+        chart_path = os.path.join(CHART_DIR, 'alerts_by_source.png')
+        fig.savefig(chart_path, bbox_inches='tight')
+        plt.close(fig)
+
+        story.append(Paragraph("Wiz Alerts, AWS GuardDuty, Snyk", self.styles['Heading2']))
+        story.append(Image(chart_path, width=6*inch, height=3*inch))
+        story.append(Spacer(1, 12))
+
         # Valid alerts on weekly basis
         weekly_df = jira_handler.get_weekly_valid_alerts_by_cluster(weeks=5)
 

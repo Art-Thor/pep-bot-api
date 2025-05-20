@@ -8,7 +8,8 @@ from config import (
     USE_JIRA_API, JIRA_PAGE_SIZE, JIRA_REQUEST_TIMEOUT,
     JIRA_PROJECT, REPORT_DAYS, JQL_TEMPLATES,
     EXTRACTION_PATTERNS, PRIORITY_MAP, CANCELLED_KEYWORDS,
-    ENABLE_CACHING, CACHE_TTL_SECONDS, CLUSTERS, NAMESPACES
+    ENABLE_CACHING, CACHE_TTL_SECONDS, CLUSTERS, NAMESPACES,
+    ALERT_SOURCES
 )
 from data_cleaning import clean_dataframe
 from classification import classify_priorities
@@ -222,6 +223,37 @@ class JiraHandler:
                 df = df[df['assignee'] != 'oleg.kolomiets.contractor']
 
             counts[ns] = len(df)
+        return counts
+
+    def get_source_alert_counts(self) -> dict[str, int]:
+        """
+        For each term in ALERT_SOURCES counts the number of tickets:
+        - using JQL template 'text_alerts'
+        - excluding status 'cancelled' and assignee 'oleg.kolomiets.contractor'
+        """
+        counts: dict[str, int] = {}
+        for term in ALERT_SOURCES:
+            jql = JQL_TEMPLATES['text_alerts'].format(
+                project=JIRA_PROJECT,
+                term=term,
+                days=REPORT_DAYS
+            )
+            issues = self.jira.search_issues(jql_str=jql)
+            df = self._to_dataframe(issues)
+            df = clean_dataframe(df)
+
+            if df.empty:
+                counts[term] = 0
+                continue
+
+            # Filter out cancelled
+            if 'status' in df.columns:
+                df = df[~df['status'].str.lower().eq('cancelled')]
+            # Filter out duplicates
+            if 'assignee' in df.columns:
+                df = df[df['assignee'] != 'oleg.kolomiets.contractor']
+
+            counts[term] = len(df)
         return counts
 
     def get_weekly_trend(self, weeks=5):

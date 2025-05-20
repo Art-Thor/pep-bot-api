@@ -77,6 +77,13 @@ JQL_TEMPLATES = {
         'AND created >= -{days}d '
         'ORDER BY createdDate DESC'
     ),
+    # Template for arbitrary text search
+    'text_alerts': (
+        'project = {project} AND text ~ "{term}" '
+        'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+        'AND created >= -{days}d '
+        'ORDER BY createdDate DESC'
+    ),
 }
 
 # List of clusters for the report
@@ -90,6 +97,13 @@ CLUSTERS = [
     'cdp-staging',
     'Staging CDP',
     'Heartbeat'
+]
+
+# List of external alert sources
+ALERT_SOURCES = [
+    'Wiz',
+    'GuardDuty',
+    'Snyk'
 ]
 
 # List of namespaces for the report
