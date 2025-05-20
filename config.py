@@ -45,6 +45,24 @@ JQL_TEMPLATES = {
         'AND priority NOT IN (Highest, High, Medium) '
         'ORDER BY createdDate DESC'
     ),
+    # Total tasks handled by NOC
+    'isd_board_total': (
+        'project = {project} '
+        'AND "NOC Representative[User Picker (single user)]" != EMPTY '
+        'AND created >= -{days}d '
+        'ORDER BY createdDate DESC'
+    ),
+    # Untriaged tasks
+    'isd_board_untriaged': (
+        'project = {project} '
+        'AND (summary ~ "Password reset request" OR summary ~ "Team Change" '
+        'OR summary ~ "Outage" OR summary ~ "Troubleshooting" '
+        'OR summary ~ "Wiz finding" OR summary ~ "Triggered on") '
+        'AND type IN ("Service Request", "Service Request with Approvals", Incident) '
+        'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+        'AND created >= -{days}d '
+        'ORDER BY createdDate DESC'
+    ),
 }
 
 # === Data processing settings ===

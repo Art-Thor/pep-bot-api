@@ -142,6 +142,22 @@ class JiraHandler:
         df = self.get_all_tickets()
         return df['namespace'].value_counts()
 
+    def get_initial_troubleshooting_metrics(self):
+        """Returns (total, untriaged, percent_triaged)."""
+        total_issues = self._fetch_issues('isd_board_total')
+        untriaged_issues = self._fetch_issues('isd_board_untriaged')
+
+        total = len(total_issues)
+        untriaged = len(untriaged_issues)
+
+        # If no tasks or no untriaged - 100%
+        if total == 0 or untriaged == 0:
+            percent = 100.0
+        else:
+            percent = (total - untriaged) / total * 100.0
+
+        return total, untriaged, percent
+
     def get_weekly_trend(self, weeks=5):
         """Return DataFrame with weekly ticket counts for last n weeks."""
         end_date = datetime.now()

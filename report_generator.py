@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import pandas as pd
+import matplotlib.pyplot as plt
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
@@ -98,6 +99,29 @@ class ReportGenerator:
                     f"({item['created'][:10]})",
                     self.styles['Normal']
                 ))
+        story.append(Spacer(1, 12))
+
+        # ISD Board Initial Troubleshooting
+        total, untriaged, percent = jira_handler.get_initial_troubleshooting_metrics()
+        story.append(Paragraph("ISD Board Initial Troubleshooting", self.styles['Heading2']))
+        
+        # Create donut chart
+        labels = ['Triaged', 'Untriaged']
+        values = [total - untriaged, untriaged]
+        fig, ax = plt.subplots()
+        ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90, wedgeprops={'width':0.3})
+        ax.axis('equal')
+        chart_path = os.path.join(CHART_DIR, 'isd_initial_troubleshooting.png')
+        fig.savefig(chart_path, bbox_inches='tight')
+        plt.close(fig)
+        
+        # Add chart and metrics to report
+        story.append(Image(chart_path, width=4*inch, height=4*inch))
+        story.append(Paragraph(
+            f"✅ Initial triaging: {percent:.1f}%  "
+            f"({total - untriaged} of {total} tickets triaged)",
+            self.styles['Normal']
+        ))
         story.append(Spacer(1, 12))
 
         # Insert charts
