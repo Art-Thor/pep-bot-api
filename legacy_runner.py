@@ -1,6 +1,7 @@
 import shutil
 import subprocess
 import os
+import sys
 from config import LEGACY_DIR, LEGACY_ART_DIR
 
 def run_legacy():
@@ -15,13 +16,29 @@ def run_legacy():
         shutil.rmtree(LEGACY_DIR)
     os.makedirs(LEGACY_ART_DIR, exist_ok=True)
 
+    # Get the directory containing this script
+    base = os.path.dirname(__file__)
+
     # 2) Dump from Jira using old data_loader
-    subprocess.run(['python', 'data_loader.py', '--out', f'{LEGACY_DIR}/dump.json'], check=True)
+    loader = os.path.join(base, 'data_loader.py')
+    if not os.path.exists(loader):
+        raise FileNotFoundError(f"Legacy data loader not found: {loader}")
+    
+    subprocess.run([
+        sys.executable,
+        loader,
+        '--out', os.path.join(LEGACY_DIR, 'dump.json')
+    ], check=True)
 
     # 3) Run legacy report generator
+    report = os.path.join(base, 'legacy_report.py')
+    if not os.path.exists(report):
+        raise FileNotFoundError(f"Legacy report generator not found: {report}")
+    
     subprocess.run([
-        'python', 'legacy_report.py',
-        '--dump', f'{LEGACY_DIR}/dump.json',
+        sys.executable,
+        report,
+        '--dump', os.path.join(LEGACY_DIR, 'dump.json'),
         '--outdir', LEGACY_ART_DIR
     ], check=True)
 
