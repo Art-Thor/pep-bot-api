@@ -3,7 +3,10 @@ from config import PRIORITY_MAP
 
 def classify_priorities(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Нормализует приоритеты в столбце 'priority' в категории P1–P4/Unknown.
+    Classifies ticket priorities using the priority map.
+    Returns the DataFrame unchanged if it's empty or missing the priority column.
     """
+    if df.empty or 'priority' not in df.columns:
+        return df
     df['priority'] = df['priority'].map(PRIORITY_MAP).fillna('Unknown')
     return df

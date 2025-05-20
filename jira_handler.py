@@ -105,7 +105,12 @@ class JiraHandler:
                 'assignee': assignee,
                 'cancelled': cancelled_flag
             })
+        
         df = pd.DataFrame(records)
+        # Early return if empty
+        if df.empty:
+            return df
+
         # Apply data cleaning and classification
         df = clean_dataframe(df)
         df = classify_priorities(df)
