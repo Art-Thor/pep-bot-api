@@ -296,6 +296,7 @@ class JiraHandler:
         Returns DataFrame of size len(CLUSTERS)×weeks, 
         where df.loc[cluster, i] = count valid issues for cluster in week i.
         Week 0: created >= 0-7d ago, week 1: 7-14d ago, etc.
+        Only includes tickets where NOC Representative is set (triaged).
         """
         # Initialize container
         data = {cluster: [] for cluster in CLUSTERS}
@@ -312,7 +313,7 @@ class JiraHandler:
                 jql = (
                     f'project = {JIRA_PROJECT} '
                     f'AND text ~ "{cluster}" '
-                    f'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+                    f'AND "NOC Representative[User Picker (single user)]" != EMPTY '
                     f'AND created >= "{start_str}" '
                     f'AND created < "{end_str}" '
                     f'ORDER BY createdDate DESC'

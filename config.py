@@ -73,7 +73,7 @@ JQL_TEMPLATES = {
     # Template for namespaces
     'namespace_alerts': (
         'project = {project} AND text ~ "{namespace}" '
-        'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+        'AND "NOC Representative[User Picker (single user)]" != EMPTY '
         'AND created >= -{days}d '
         'ORDER BY createdDate DESC'
     ),
