@@ -77,10 +77,17 @@ JQL_TEMPLATES = {
         'AND created >= -{days}d '
         'ORDER BY createdDate DESC'
     ),
-    # Template for arbitrary text search
-    'text_alerts': (
+    # Template for untriaged text search
+    'text_untriaged': (
         'project = {project} AND text ~ "{term}" '
         'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+        'AND created >= -{days}d '
+        'ORDER BY createdDate DESC'
+    ),
+    # Template for triaged text search (Wiz, GuardDuty, Snyk)
+    'text_triaged': (
+        'project = {project} AND text ~ "{term}" '
+        'AND "NOC Representative[User Picker (single user)]" != EMPTY '
         'AND created >= -{days}d '
         'ORDER BY createdDate DESC'
     ),

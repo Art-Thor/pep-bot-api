@@ -228,12 +228,12 @@ class JiraHandler:
     def get_source_alert_counts(self) -> dict[str, int]:
         """
         For each term in ALERT_SOURCES counts the number of tickets:
-        - using JQL template 'text_alerts'
+        - using JQL template 'text_triaged' (NOC Representative != EMPTY)
         - excluding status 'cancelled' and assignee 'oleg.kolomiets.contractor'
         """
         counts: dict[str, int] = {}
         for term in ALERT_SOURCES:
-            jql = JQL_TEMPLATES['text_alerts'].format(
+            jql = JQL_TEMPLATES['text_triaged'].format(
                 project=JIRA_PROJECT,
                 term=term,
                 days=REPORT_DAYS
