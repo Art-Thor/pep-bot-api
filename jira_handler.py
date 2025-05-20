@@ -176,17 +176,21 @@ class JiraHandler:
                 cluster=cluster,
                 days=REPORT_DAYS
             )
-            # Use JIRA_PAGE_SIZE instead of maxResults=False
-            issues = self.jira.search_issues(
-                jql_str=jql,
-                maxResults=JIRA_PAGE_SIZE
-            )
+            issues = self.jira.search_issues(jql_str=jql)
             df = self._to_dataframe(issues)
+            df = clean_dataframe(df)
+
+            # If empty - set 0 and continue
+            if df.empty:
+                counts[cluster] = 0
+                continue
 
             # Filter out cancelled
-            df = df[~df['status'].str.lower().eq('cancelled')]
+            if 'status' in df.columns:
+                df = df[~df['status'].str.lower().eq('cancelled')]
             # Filter out "duplicates" by assignee
-            df = df[df['assignee'] != 'oleg.kolomiets.contractor']
+            if 'assignee' in df.columns:
+                df = df[df['assignee'] != 'oleg.kolomiets.contractor']
 
             counts[cluster] = len(df)
         return counts
