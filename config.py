@@ -63,7 +63,24 @@ JQL_TEMPLATES = {
         'AND created >= -{days}d '
         'ORDER BY createdDate DESC'
     ),
+    # Base template for clusters
+    'cluster_alerts': (
+        'project = {project} AND text ~ "{cluster}" '
+        'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+        'AND created >= -{days}d '
+        'ORDER BY createdDate DESC'
+    ),
 }
+
+# List of clusters for the report
+CLUSTERS = [
+    'ecomm-prod01-scus1',
+    'apps-prod-01',
+    'de-airflow-production',
+    'airflow-prod-01',
+    'EBS',
+    'GHA',
+]
 
 # === Data processing settings ===
 # Patterns for extracting cluster and namespace

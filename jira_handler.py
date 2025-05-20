@@ -8,7 +8,7 @@ from config import (
     USE_JIRA_API, JIRA_PAGE_SIZE, JIRA_REQUEST_TIMEOUT,
     JIRA_PROJECT, REPORT_DAYS, JQL_TEMPLATES,
     EXTRACTION_PATTERNS, PRIORITY_MAP, CANCELLED_KEYWORDS,
-    ENABLE_CACHING, CACHE_TTL_SECONDS
+    ENABLE_CACHING, CACHE_TTL_SECONDS, CLUSTERS
 )
 from data_cleaning import clean_dataframe
 from classification import classify_priorities
@@ -157,6 +157,31 @@ class JiraHandler:
             percent = (total - untriaged) / total * 100.0
 
         return total, untriaged, percent
+
+    def get_cluster_alert_counts(self) -> dict[str, int]:
+        """
+        For each cluster in CLUSTERS, counts the number of tickets:
+        - using JQL template 'cluster_alerts'
+        - excluding status 'cancelled' and assignee 'oleg.kolomiets.contractor'
+        """
+        counts: dict[str, int] = {}
+        for cluster in CLUSTERS:
+            jql = JQL_TEMPLATES['cluster_alerts'].format(
+                project=JIRA_PROJECT,
+                cluster=cluster,
+                days=REPORT_DAYS
+            )
+            # Request all found tasks
+            issues = self.jira.search_issues(jql_str=jql, maxResults=False)
+            df = self._to_dataframe(issues)
+
+            # Filter out cancelled
+            df = df[~df['status'].str.lower().eq('cancelled')]
+            # Filter out "duplicates" by assignee
+            df = df[df['assignee'] != 'oleg.kolomiets.contractor']
+
+            counts[cluster] = len(df)
+        return counts
 
     def get_weekly_trend(self, weeks=5):
         """Return DataFrame with weekly ticket counts for last n weeks."""

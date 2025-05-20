@@ -124,6 +124,29 @@ class ReportGenerator:
         ))
         story.append(Spacer(1, 12))
 
+        # Alerts by cluster
+        counts = jira_handler.get_cluster_alert_counts()
+        # Create pandas Series for convenience
+        series = pd.Series(counts)
+
+        # Create bar chart
+        fig, ax = plt.subplots(figsize=(8, 4))
+        series.plot.bar(ax=ax)
+        ax.set_title('Alerts by cluster')
+        ax.set_xlabel('')
+        ax.set_ylabel('Count')
+        plt.xticks(rotation=30, ha='right')
+        fig.tight_layout()
+
+        chart_path = os.path.join(CHART_DIR, 'alerts_by_cluster.png')
+        fig.savefig(chart_path, bbox_inches='tight')
+        plt.close(fig)
+
+        # Add to PDF
+        story.append(Paragraph("Alerts by Cluster", self.styles['Heading2']))
+        story.append(Image(chart_path, width=6*inch, height=3*inch))
+        story.append(Spacer(1, 12))
+
         # Insert charts
         for title, path in [
             ('Priority Distribution', priority_chart),
