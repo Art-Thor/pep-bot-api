@@ -239,16 +239,28 @@ class ReportGenerator:
         story.append(Spacer(1, 12))
 
         # Number of Alerts by Types and Priorities
-        df = jira_handler.get_all_tickets()  # already includes alert_type, priority, cancelled
-        # Mark cancelled tickets
-        df.loc[df['cancelled'], 'priority'] = 'Cancelled'
+        df = jira_handler.get_all_tickets()
+        # Create separate PriorityFinal column
+        df['PriorityFinal'] = df['priority']
+        # Only rename cancelled tickets
+        df.loc[df['cancelled'], 'PriorityFinal'] = 'Cancelled'
 
-        # Keep only needed priorities
-        df = df[df['priority'].isin(['P1', 'P2', 'P3', 'Cancelled'])]
-
-        # Group and pivot
-        grp = df.groupby(['alert_type', 'priority']).size().reset_index(name='count')
-        pivot = grp.pivot(index='alert_type', columns='priority', values='count').fillna(0)
+        # Build pivot table directly using PriorityFinal
+        pivot = (
+            df
+            .pivot_table(
+                index='alert_type',
+                columns='PriorityFinal',
+                values='key',
+                aggfunc='count',
+                fill_value=0
+            )
+        )
+        # Ensure we have all four columns in the correct order
+        for col in ['P1', 'P2', 'P3', 'Cancelled']:
+            if col not in pivot.columns:
+                pivot[col] = 0
+        pivot = pivot[['P1', 'P2', 'P3', 'Cancelled']]
 
         # Sort by total count
         pivot['total'] = pivot.sum(axis=1)
