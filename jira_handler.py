@@ -171,8 +171,11 @@ class JiraHandler:
                 cluster=cluster,
                 days=REPORT_DAYS
             )
-            # Request all found tasks
-            issues = self.jira.search_issues(jql_str=jql, maxResults=False)
+            # Use JIRA_PAGE_SIZE instead of maxResults=False
+            issues = self.jira.search_issues(
+                jql_str=jql,
+                maxResults=JIRA_PAGE_SIZE
+            )
             df = self._to_dataframe(issues)
 
             # Filter out cancelled
