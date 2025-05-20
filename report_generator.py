@@ -238,6 +238,43 @@ class ReportGenerator:
         story.append(Image(canceled_chart, width=6*inch, height=3*inch))
         story.append(Spacer(1, 12))
 
+        # Number of Alerts by Types and Priorities
+        df = jira_handler.get_all_tickets()  # already includes alert_type, priority, cancelled
+        # Mark cancelled tickets
+        df.loc[df['cancelled'], 'priority'] = 'Cancelled'
+
+        # Keep only needed priorities
+        df = df[df['priority'].isin(['P1', 'P2', 'P3', 'Cancelled'])]
+
+        # Group and pivot
+        grp = df.groupby(['alert_type', 'priority']).size().reset_index(name='count')
+        pivot = grp.pivot(index='alert_type', columns='priority', values='count').fillna(0)
+
+        # Sort by total count
+        pivot['total'] = pivot.sum(axis=1)
+        pivot = pivot.sort_values('total', ascending=False).drop(columns='total')
+
+        # Create horizontal stacked bar chart
+        fig, ax = plt.subplots(figsize=(8, max(4, 0.4*len(pivot))))
+        pivot.plot.barh(
+            stacked=True,
+            ax=ax,
+            legend=True
+        )
+        ax.set_title('Number of Alerts by Types and Priorities')
+        ax.set_xlabel('Count')
+        ax.set_ylabel('Alert Type')
+        ax.legend(title='Priority', bbox_to_anchor=(1.02, 1), loc='upper left')
+        plt.tight_layout()
+
+        chart_path = os.path.join(CHART_DIR, 'alerts_by_type_priority.png')
+        fig.savefig(chart_path, bbox_inches='tight')
+        plt.close(fig)
+
+        story.append(Paragraph("Number of Alerts by Types and Priorities", self.styles['Heading2']))
+        story.append(Image(chart_path, width=6*inch, height=4*inch))
+        story.append(Spacer(1, 12))
+
         # Insert charts
         for title, path in [
             ('Priority Distribution', priority_chart),

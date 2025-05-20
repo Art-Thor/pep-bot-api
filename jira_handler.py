@@ -12,7 +12,7 @@ from config import (
     ALERT_SOURCES
 )
 from data_cleaning import clean_dataframe
-from classification import classify_priorities
+from classification import classify_priorities, assign_alert_type
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +112,10 @@ class JiraHandler:
         if df.empty:
             return df
 
-        # Apply data cleaning and classification
+        # Apply data cleaning and classification pipeline
         df = clean_dataframe(df)
         df = classify_priorities(df)
+        df = assign_alert_type(df)
         logger.debug(f"Converted {len(df)} issues to DataFrame")
         return df
 
@@ -204,25 +205,31 @@ class JiraHandler:
         """
         counts: dict[str, int] = {}
         for ns in NAMESPACES:
-            jql = JQL_TEMPLATES['namespace_alerts'].format(
-                project=JIRA_PROJECT,
-                namespace=ns,
-                days=REPORT_DAYS
-            )
-            issues = self.jira.search_issues(jql_str=jql)
-            df = self._to_dataframe(issues)
-            df = clean_dataframe(df)
+            try:
+                jql = JQL_TEMPLATES['namespace_alerts'].format(
+                    project=JIRA_PROJECT,
+                    namespace=ns,
+                    days=REPORT_DAYS
+                )
+                issues = self.jira.search_issues(jql_str=jql)
+                df = self._to_dataframe(issues)
+                df = clean_dataframe(df)
 
-            if df.empty:
-                counts[ns] = 0
+                if df.empty:
+                    counts[ns] = 0
+                    continue
+
+                if 'status' in df.columns:
+                    df = df[~df['status'].str.lower().eq('cancelled')]
+                if 'assignee' in df.columns:
+                    df = df[df['assignee'] != 'oleg.kolomiets.contractor']
+
+                counts[ns] = len(df)
+            except Exception as e:
+                logger.error(f"Error getting alerts for namespace {ns}: {str(e)}")
+                counts[ns] = 0  # Set count to 0 on error
                 continue
 
-            if 'status' in df.columns:
-                df = df[~df['status'].str.lower().eq('cancelled')]
-            if 'assignee' in df.columns:
-                df = df[df['assignee'] != 'oleg.kolomiets.contractor']
-
-            counts[ns] = len(df)
         return counts
 
     def get_source_alert_counts(self) -> dict[str, int]:
