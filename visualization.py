@@ -7,8 +7,8 @@ from config import CHART_DIR
 
 def plot_priority_levels(df: pd.DataFrame) -> str:
     """
-    Строит круговую диаграмму по приоритетам и сохраняет в CHART_DIR,
-    возвращает путь к файлу PNG.
+    Creates a pie chart for priorities and saves it to CHART_DIR,
+    returns the path to the PNG file.
     """
     series = df['priority'].value_counts()
     fig, ax = plt.subplots()
@@ -25,8 +25,8 @@ def plot_priority_levels(df: pd.DataFrame) -> str:
 
 def plot_alert_types(df: pd.DataFrame, column: str = 'cluster') -> str:
     """
-    Строит бар-чарт по указанной колонке (cluster или namespace),
-    возвращает путь к PNG.
+    Creates a bar chart for the specified column (cluster or namespace),
+    returns the path to the PNG file.
     """
     series = df[column].value_counts()
     fig, ax = plt.subplots()
@@ -39,17 +39,17 @@ def plot_alert_types(df: pd.DataFrame, column: str = 'cluster') -> str:
     return path
 
 def plot_cluster_distribution(df: pd.DataFrame) -> str:
-    """Строит бар-чарт по кластерам."""
+    """Creates a bar chart for clusters."""
     return plot_alert_types(df, column='cluster')
 
 def plot_namespace_distribution(df: pd.DataFrame) -> str:
-    """Строит бар-чарт по неймспейсам."""
+    """Creates a bar chart for namespaces."""
     return plot_alert_types(df, column='namespace')
 
 def plot_p1_alerts(df: pd.DataFrame) -> str:
     """
-    Строит таблицу P1-такетов как изображение.
-    Если P1-такетов нет, создаёт изображение с сообщением.
+    Creates a table of P1 tickets as an image.
+    If there are no P1 tickets, creates an image with a message.
     """
     p1 = df[df['priority']=='P1'][['key','summary','status','assignee']]
     

@@ -34,7 +34,7 @@ def handle_jira_report(ack, body, client):
         client.chat_postEphemeral(
             channel=channel_id,
             user=user_id,
-            text="🔄 Генерация отчёта запущена, это может занять несколько минут..."
+            text="🔄 Report generation started, this may take a few minutes..."
         )
     except SlackApiError as e:
         logger.warning(f"Failed to send start notification: {e.response['error']}")
@@ -52,7 +52,7 @@ def handle_jira_report(ack, body, client):
             channels=channel_id,
             file=report_path,
             title=title,
-            initial_comment="✅ Отчёт готов и отправлен!"
+            initial_comment="✅ Report is ready and sent!"
         )
         logger.info(f"Report uploaded: {report_path}")
 
@@ -64,7 +64,7 @@ def handle_jira_report(ack, body, client):
             client.chat_postEphemeral(
                 channel=channel_id,
                 user=user_id,
-                text=f"❌ Ошибка при генерации отчёта: {e}"
+                text=f"❌ Error generating report: {e}"
             )
         except SlackApiError:
             logger.error("Failed to send error notification to user")
