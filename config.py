@@ -66,7 +66,7 @@ JQL_TEMPLATES = {
     # Base template for clusters
     'cluster_alerts': (
         'project = {project} AND text ~ "{cluster}" '
-        'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+        'AND "NOC Representative[User Picker (single user)]" != EMPTY '
         'AND created >= -{days}d '
         'ORDER BY createdDate DESC'
     ),
