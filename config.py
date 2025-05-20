@@ -18,6 +18,9 @@ USE_JIRA_API = True
 JIRA_PAGE_SIZE = int(os.getenv('JIRA_PAGE_SIZE', 50))
 JIRA_REQUEST_TIMEOUT = float(os.getenv('JIRA_REQUEST_TIMEOUT', 10))
 
+# === Confluence configuration ===
+CONFLUENCE_POSTMORTEM_PARENT = os.getenv('CONFLUENCE_POSTMORTEM_PARENT', '14745973')
+
 # === Report configuration ===
 REPORT_TITLE = os.getenv('REPORT_TITLE', "Pepsico Weekly Report")
 JIRA_PROJECT = os.getenv('JIRA_PROJECT', "ISD")

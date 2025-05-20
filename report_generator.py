@@ -9,6 +9,7 @@ from reportlab.lib.units import inch
 
 from config import REPORT_DIR, CHART_DIR, REPORT_TITLE, USE_JIRA_API
 from jira_handler import JiraHandler
+from confluence_handler import ConfluenceHandler
 
 # Old visualization utilities
 from visualization import (
@@ -24,6 +25,8 @@ class ReportGenerator:
         self.styles = getSampleStyleSheet()
         os.makedirs(REPORT_DIR, exist_ok=True)
         os.makedirs(CHART_DIR, exist_ok=True)
+        # Initialize handlers
+        self.conf_handler = ConfluenceHandler()
 
     def _create_trend_chart(self, trend_data):
         """Create a simple line chart for weekly trends using pandas built-in"""
@@ -81,6 +84,20 @@ class ReportGenerator:
             f"Cancelled/Resolved: {cancelled_count}",
             summary_style
         ))
+        story.append(Spacer(1, 12))
+
+        # Post Mortems section
+        pm = self.conf_handler.get_recent_postmortems()
+        story.append(Paragraph("P1 — Post Mortems", self.styles['Heading2']))
+        if not pm:
+            story.append(Paragraph("No Post Mortems created in the last week.", self.styles['Normal']))
+        else:
+            for item in pm:
+                story.append(Paragraph(
+                    f"- <a href=\"{item['link']}\">{item['title']}</a> "
+                    f"({item['created'][:10]})",
+                    self.styles['Normal']
+                ))
         story.append(Spacer(1, 12))
 
         # Insert charts
