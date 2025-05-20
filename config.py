@@ -70,6 +70,13 @@ JQL_TEMPLATES = {
         'AND created >= -{days}d '
         'ORDER BY createdDate DESC'
     ),
+    # Template for namespaces
+    'namespace_alerts': (
+        'project = {project} AND text ~ "{namespace}" '
+        'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+        'AND created >= -{days}d '
+        'ORDER BY createdDate DESC'
+    ),
 }
 
 # List of clusters for the report
@@ -80,6 +87,15 @@ CLUSTERS = [
     'airflow-prod-01',
     'EBS',
     'GHA',
+]
+
+# List of namespaces for the report
+NAMESPACES = [
+    'cert-manager',
+    'airflow-dpi',
+    'simple-machine',
+    'pepdirect',
+    'wiz'
 ]
 
 # === Data processing settings ===

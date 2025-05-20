@@ -147,6 +147,28 @@ class ReportGenerator:
         story.append(Image(chart_path, width=6*inch, height=3*inch))
         story.append(Spacer(1, 12))
 
+        # Alerts by namespace
+        namespace_counts = jira_handler.get_namespace_alert_counts()
+        ns_series = pd.Series(namespace_counts)
+
+        # Create bar chart
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ns_series.plot.bar(ax=ax)
+        ax.set_title('Alerts by Namespace')
+        ax.set_xlabel('')
+        ax.set_ylabel('Count')
+        plt.xticks(rotation=30, ha='right')
+        fig.tight_layout()
+
+        ns_chart = os.path.join(CHART_DIR, 'alerts_by_namespace.png')
+        fig.savefig(ns_chart, bbox_inches='tight')
+        plt.close(fig)
+
+        # Add to PDF
+        story.append(Paragraph("Alerts by Namespace", self.styles['Heading2']))
+        story.append(Image(ns_chart, width=6*inch, height=3*inch))
+        story.append(Spacer(1, 12))
+
         # Insert charts
         for title, path in [
             ('Priority Distribution', priority_chart),

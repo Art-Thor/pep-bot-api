@@ -8,7 +8,7 @@ from config import (
     USE_JIRA_API, JIRA_PAGE_SIZE, JIRA_REQUEST_TIMEOUT,
     JIRA_PROJECT, REPORT_DAYS, JQL_TEMPLATES,
     EXTRACTION_PATTERNS, PRIORITY_MAP, CANCELLED_KEYWORDS,
-    ENABLE_CACHING, CACHE_TTL_SECONDS, CLUSTERS
+    ENABLE_CACHING, CACHE_TTL_SECONDS, CLUSTERS, NAMESPACES
 )
 from data_cleaning import clean_dataframe
 from classification import classify_priorities
@@ -193,6 +193,35 @@ class JiraHandler:
                 df = df[df['assignee'] != 'oleg.kolomiets.contractor']
 
             counts[cluster] = len(df)
+        return counts
+
+    def get_namespace_alert_counts(self) -> dict[str, int]:
+        """
+        For each namespace in NAMESPACES, counts the number of tickets:
+        - using JQL template 'namespace_alerts'
+        - excluding status 'cancelled' and assignee 'oleg.kolomiets.contractor'
+        """
+        counts: dict[str, int] = {}
+        for ns in NAMESPACES:
+            jql = JQL_TEMPLATES['namespace_alerts'].format(
+                project=JIRA_PROJECT,
+                namespace=ns,
+                days=REPORT_DAYS
+            )
+            issues = self.jira.search_issues(jql_str=jql)
+            df = self._to_dataframe(issues)
+            df = clean_dataframe(df)
+
+            if df.empty:
+                counts[ns] = 0
+                continue
+
+            if 'status' in df.columns:
+                df = df[~df['status'].str.lower().eq('cancelled')]
+            if 'assignee' in df.columns:
+                df = df[df['assignee'] != 'oleg.kolomiets.contractor']
+
+            counts[ns] = len(df)
         return counts
 
     def get_weekly_trend(self, weeks=5):
