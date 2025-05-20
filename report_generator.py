@@ -43,22 +43,10 @@ class ReportGenerator:
         fig.clear()
         return chart_path
 
-    def generate_report(self, jira_handler: JiraHandler) -> str:
+    def generate_report(self, jira_handler: JiraHandler, legacy_dir: str) -> str:
         """Generate the complete report as a PDF and return its path."""
         # Fetch data via API
         df = jira_handler.get_all_tickets()
-
-        # Charts using old widgets
-        priority_chart = plot_priority_levels(df)
-        cluster_chart = plot_cluster_distribution(df)
-        namespace_chart = plot_namespace_distribution(df)
-
-        # Weekly trend
-        trend_df = jira_handler.get_weekly_trend()
-        trend_chart = self._create_trend_chart(trend_df)
-
-        # P1 alerts table image
-        p1_alerts_image = plot_p1_alerts(df)
 
         # Build PDF
         week_number = datetime.now().isocalendar()[1] - 1
@@ -287,21 +275,21 @@ class ReportGenerator:
         story.append(Image(chart_path, width=6*inch, height=4*inch))
         story.append(Spacer(1, 12))
 
-        # Insert charts
-        for title, path in [
-            ('Priority Distribution', priority_chart),
-            ('Cluster Distribution', cluster_chart),
-            ('Namespace Distribution', namespace_chart),
-            ('Weekly Trend', trend_chart)
-        ]:
-            story.append(Paragraph(title, self.styles['Heading2']))
-            story.append(Image(path, width=6*inch, height=4*inch))
-            story.append(Spacer(1, 12))
+        # Legacy widgets
+        legacy_widgets = [
+            ('Priority Distribution', 'priority_distribution.png'),
+            ('Cluster Distribution', 'cluster_distribution.png'),
+            ('Namespace Distribution', 'namespace_distribution.png'),
+            ('Weekly Trend', 'weekly_trend.png'),
+            ('P1 Alerts', 'p1_alerts.png')
+        ]
 
-        # P1 Alerts
-        story.append(Paragraph("P1 Alerts", self.styles['Heading2']))
-        story.append(Image(p1_alerts_image, width=6*inch, height=4*inch))
-        story.append(Spacer(1, 12))
+        for title, filename in legacy_widgets:
+            img_path = os.path.join(legacy_dir, filename)
+            if os.path.exists(img_path):
+                story.append(Paragraph(title, self.styles['Heading2']))
+                story.append(Image(img_path, width=6*inch, height=4*inch))
+                story.append(Spacer(1, 12))
 
         # Build and save
         doc.build(story)

@@ -8,6 +8,7 @@ from slack_sdk.errors import SlackApiError
 from config import SLACK_BOT_TOKEN, SLACK_APP_TOKEN
 from jira_handler import JiraHandler
 from report_generator import ReportGenerator
+from legacy_runner import run_legacy
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -40,8 +41,11 @@ def handle_jira_report(ack, body, client):
         logger.warning(f"Failed to send start notification: {e.response['error']}")
 
     try:
+        # 0) Run legacy generators
+        legacy_dir = run_legacy()
+
         # Generate the report (blocking)
-        report_path = report_generator.generate_report(jira_handler)
+        report_path = report_generator.generate_report(jira_handler, legacy_dir)
 
         # Prepare the title with week number
         week_number = datetime.now().isocalendar()[1] - 1

@@ -1,6 +1,11 @@
 import os
 from dotenv import load_dotenv
 
+# Base directories
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LEGACY_DIR = os.path.join(BASE_DIR, 'legacy_output')
+LEGACY_ART_DIR = os.path.join(LEGACY_DIR, 'artifacts')
+
 # Load environment variables
 load_dotenv()
 
@@ -154,7 +159,6 @@ CHART_COLORS = {
 }
 
 # === Paths ===
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPORT_DIR = os.path.join(BASE_DIR, 'reports')
 CHART_DIR = os.path.join(BASE_DIR, 'charts')
 
