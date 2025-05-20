@@ -169,6 +169,31 @@ class ReportGenerator:
         story.append(Image(ns_chart, width=6*inch, height=3*inch))
         story.append(Spacer(1, 12))
 
+        # Valid alerts on weekly basis
+        weekly_df = jira_handler.get_weekly_valid_alerts_by_cluster(weeks=5)
+
+        # Create stacked bar chart
+        fig, ax = plt.subplots(figsize=(10, 5))
+        weekly_df.plot.bar(
+            stacked=True,
+            ax=ax,
+            legend=True
+        )
+        ax.set_title('Valid alerts on weekly basis')
+        ax.set_xlabel('')
+        ax.set_ylabel('Count')
+        ax.legend(title='Weeks', bbox_to_anchor=(1.02, 1), loc='upper left')
+        plt.xticks(rotation=30, ha='right')
+        fig.tight_layout()
+
+        weekly_chart = os.path.join(CHART_DIR, 'alerts_weekly_trend.png')
+        fig.savefig(weekly_chart, bbox_inches='tight')
+        plt.close(fig)
+
+        story.append(Paragraph("Valid alerts on weekly basis", self.styles['Heading2']))
+        story.append(Image(weekly_chart, width=6*inch, height=3*inch))
+        story.append(Spacer(1, 12))
+
         # Insert charts
         for title, path in [
             ('Priority Distribution', priority_chart),

@@ -81,12 +81,15 @@ JQL_TEMPLATES = {
 
 # List of clusters for the report
 CLUSTERS = [
-    'ecomm-prod01-scus1',
     'apps-prod-01',
+    'ecomm-prod-scus1',
     'de-airflow-production',
+    'de-airflow-staging',
     'airflow-prod-01',
-    'EBS',
-    'GHA',
+    'cdp-production',
+    'cdp-staging',
+    'Staging CDP',
+    'Heartbeat'
 ]
 
 # List of namespaces for the report

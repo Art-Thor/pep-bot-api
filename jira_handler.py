@@ -258,3 +258,52 @@ class JiraHandler:
         df = pd.DataFrame(trend)
         logger.info("Generated weekly trend data")
         return df
+
+    def get_weekly_valid_alerts_by_cluster(self, weeks: int = 5) -> pd.DataFrame:
+        """
+        Returns DataFrame of size len(CLUSTERS)×weeks, 
+        where df.loc[cluster, i] = count valid issues for cluster in week i.
+        Week 0: created >= 0-7d ago, week 1: 7-14d ago, etc.
+        """
+        # Initialize container
+        data = {cluster: [] for cluster in CLUSTERS}
+        
+        # For each week from 0 to weeks-1
+        for i in range(weeks):
+            end = datetime.utcnow() - timedelta(days=7*i)
+            start = end - timedelta(days=7)
+            start_str = start.strftime('%Y-%m-%d')
+            end_str = end.strftime('%Y-%m-%d')
+
+            # For each cluster
+            for cluster in CLUSTERS:
+                jql = (
+                    f'project = {JIRA_PROJECT} '
+                    f'AND text ~ "{cluster}" '
+                    f'AND "NOC Representative[User Picker (single user)]" = EMPTY '
+                    f'AND created >= "{start_str}" '
+                    f'AND created < "{end_str}" '
+                    f'ORDER BY createdDate DESC'
+                )
+                issues = self.jira.search_issues(jql_str=jql, maxResults=JIRA_PAGE_SIZE)
+                df = self._to_dataframe(issues)
+                df = clean_dataframe(df)
+
+                # Apply filters
+                if not df.empty:
+                    if 'status' in df.columns:
+                        df = df[~df['status'].str.lower().eq('cancelled')]
+                    if 'assignee' in df.columns:
+                        df = df[df['assignee'] != 'oleg.kolomiets.contractor']
+                count = len(df) if not df.empty else 0
+                data[cluster].append(count)
+
+        # Create DataFrame with weeks as columns
+        cols = [f'week {-i}' for i in range(weeks-1, -1, -1)]
+        df = pd.DataFrame(data, index=cols).T  # transpose: now index=clusters, cols=weeks
+        
+        # Rename columns to actual week numbers
+        current_week = datetime.utcnow().isocalendar()[1]
+        df.columns = [f"week {current_week - i - 1}" for i in range(weeks)]
+        
+        return df
