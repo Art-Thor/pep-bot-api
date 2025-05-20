@@ -96,14 +96,12 @@ JQL_TEMPLATES = {
 # List of clusters for the report
 CLUSTERS = [
     'apps-prod-01',
-    'ecomm-prod-scus1',
     'de-airflow-production',
-    'de-airflow-staging',
+    'ecomm-prod01-scus1',
     'airflow-prod-01',
-    'cdp-production',
+    'EBS',
     'cdp-staging',
-    'Staging CDP',
-    'Heartbeat'
+    'GHA'
 ]
 
 # List of external alert sources

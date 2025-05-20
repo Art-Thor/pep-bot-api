@@ -340,3 +340,54 @@ class JiraHandler:
         df.columns = [f"week {current_week - i - 1}" for i in range(weeks)]
         
         return df
+
+    def get_weekly_canceled_alerts_by_cluster(self, weeks: int = 5) -> pd.DataFrame:
+        """
+        Like get_weekly_valid_alerts_by_cluster, but counts only tickets that are:
+          - status = Cancelled OR assignee = 'oleg.kolomiets.contractor'
+          - triaged (NOC != EMPTY)
+          - for each of the last `weeks` 7-day intervals.
+        """
+        data = {cluster: [] for cluster in CLUSTERS}
+        now = datetime.utcnow()
+
+        for i in range(weeks):
+            end = now - timedelta(days=7 * i)
+            start = end - timedelta(days=7)
+            start_str = start.strftime('%Y-%m-%d')
+            end_str = end.strftime('%Y-%m-%d')
+
+            for cluster in CLUSTERS:
+                # Triaged = NOC != EMPTY
+                jql = (
+                    f'project = {JIRA_PROJECT} '
+                    f'AND text ~ "{cluster}" '
+                    f'AND "NOC Representative[User Picker (single user)]" != EMPTY '
+                    f'AND created >= "{start_str}" '
+                    f'AND created < "{end_str}" '
+                    'ORDER BY createdDate DESC'
+                )
+                issues = self.jira.search_issues(jql_str=jql, maxResults=JIRA_PAGE_SIZE)
+                df = self._to_dataframe(issues)
+                df = clean_dataframe(df)
+
+                if df.empty:
+                    data[cluster].append(0)
+                    continue
+
+                # Keep only cancelled OR assigned to Oleg
+                mask_cancelled = df['status'].str.lower().eq('cancelled')
+                mask_oleg = df['assignee'].str.lower() == 'oleg.kolomiets.contractor'
+                df_canceled = df[mask_cancelled | mask_oleg]
+
+                data[cluster].append(len(df_canceled))
+
+        # Create DataFrame, similar to valid alerts
+        cols = [f'week {-i}' for i in range(weeks - 1, -1, -1)]
+        df = pd.DataFrame(data, index=cols).T
+        
+        # Rename columns to actual week numbers
+        current_week = datetime.utcnow().isocalendar()[1]
+        df.columns = [f"week {current_week - i - 1}" for i in range(weeks)]
+        
+        return df
