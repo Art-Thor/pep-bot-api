@@ -88,6 +88,7 @@ class JiraHandler:
             status = fields.status.name if fields.status else 'Unknown'
             created = getattr(fields, 'created', None)
             assignee = fields.assignee.displayName if fields.assignee else 'Unassigned'
+            resolution = fields.resolution.name if fields.resolution else ''
             # Extraction
             cluster = self._extract_pattern(summary, 'cluster')
             namespace = self._extract_pattern(summary, 'namespace')
@@ -104,6 +105,7 @@ class JiraHandler:
                 'cluster': cluster,
                 'namespace': namespace,
                 'assignee': assignee,
+                'resolution': resolution,
                 'cancelled': cancelled_flag
             })
         

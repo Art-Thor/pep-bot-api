@@ -272,9 +272,12 @@ class ReportGenerator:
         story.append(Paragraph("Ticket Lists", self.styles['Heading1']))
         story.append(Spacer(1, 12))
 
+        # Get all tickets
+        df = jira_handler.get_all_tickets()
+        
         # 1. Duplicate list (tickets assigned to oleg.kolomiets.contractor)
         story.append(Paragraph("Duplicate List", self.styles['Heading2']))
-        duplicate_tickets = df[df['assignee'] == 'oleg.kolomiets.contractor']
+        duplicate_tickets = df[df['assignee'].str.lower() == 'oleg.kolomiets.contractor']
         if not duplicate_tickets.empty:
             for _, ticket in duplicate_tickets.iterrows():
                 summary = ticket['summary']
@@ -289,17 +292,15 @@ class ReportGenerator:
         story.append(Paragraph("Canceled List", self.styles['Heading2']))
         canceled_tickets = df[
             (df['status'].str.lower() == 'canceled') & 
-            (df['assignee'] != 'oleg.kolomiets.contractor')
+            (df['assignee'].str.lower() != 'oleg.kolomiets.contractor')
         ]
         if not canceled_tickets.empty:
             for _, ticket in canceled_tickets.iterrows():
                 summary = ticket['summary']
                 if len(summary) > 80:
                     summary = summary[:77] + '...'
-                # Try to extract cancellation reason from summary
-                reason = 'No reason provided'
-                if 'snyk' in summary.lower():
-                    reason = 'non-infra'
+                # Get resolution reason
+                reason = ticket['resolution'] if pd.notna(ticket['resolution']) else 'No reason provided'
                 story.append(Paragraph(f"• {ticket['key']}: {summary} ({reason})", self.styles['Normal']))
         else:
             story.append(Paragraph("No canceled tickets found.", self.styles['Normal']))
@@ -307,14 +308,17 @@ class ReportGenerator:
 
         # 3. Other cancelations (tickets assigned to arthur.holubov)
         story.append(Paragraph("Other Cancelations", self.styles['Heading2']))
-        other_tickets = df[df['assignee'] == 'arthur.holubov']
+        other_tickets = df[df['assignee'].str.lower() == 'arthur.holubov']
         if not other_tickets.empty:
             for _, ticket in other_tickets.iterrows():
                 summary = ticket['summary']
                 if len(summary) > 80:
                     summary = summary[:77] + '...'
-                # Set reason based on summary content
-                reason = 'non-infra' if 'snyk' in summary.lower() else 'No reason provided'
+                # Set reason based on summary content or resolution
+                if 'snyk' in summary.lower():
+                    reason = 'non-infra'
+                else:
+                    reason = ticket['resolution'] if pd.notna(ticket['resolution']) else 'No reason provided'
                 story.append(Paragraph(f"• {ticket['key']}: {summary} ({reason})", self.styles['Normal']))
         else:
             story.append(Paragraph("No other cancelations found.", self.styles['Normal']))
