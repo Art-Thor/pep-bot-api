@@ -268,6 +268,58 @@ class ReportGenerator:
             story.append(Image(img_path, width=6*inch, height=4*inch))
             story.append(Spacer(1, 12))
 
+        # === Ticket Lists ===
+        story.append(Paragraph("Ticket Lists", self.styles['Heading1']))
+        story.append(Spacer(1, 12))
+
+        # 1. Duplicate list (tickets assigned to oleg.kolomiets.contractor)
+        story.append(Paragraph("Duplicate List", self.styles['Heading2']))
+        duplicate_tickets = df[df['assignee'] == 'oleg.kolomiets.contractor']
+        if not duplicate_tickets.empty:
+            for _, ticket in duplicate_tickets.iterrows():
+                summary = ticket['summary']
+                if len(summary) > 80:
+                    summary = summary[:77] + '...'
+                story.append(Paragraph(f"• {ticket['key']}: {summary}", self.styles['Normal']))
+        else:
+            story.append(Paragraph("No duplicate tickets found.", self.styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        # 2. Canceled list (tickets with status 'canceled' but not assigned to oleg.kolomiets.contractor)
+        story.append(Paragraph("Canceled List", self.styles['Heading2']))
+        canceled_tickets = df[
+            (df['status'].str.lower() == 'canceled') & 
+            (df['assignee'] != 'oleg.kolomiets.contractor')
+        ]
+        if not canceled_tickets.empty:
+            for _, ticket in canceled_tickets.iterrows():
+                summary = ticket['summary']
+                if len(summary) > 80:
+                    summary = summary[:77] + '...'
+                # Try to extract cancellation reason from summary
+                reason = 'No reason provided'
+                if 'snyk' in summary.lower():
+                    reason = 'non-infra'
+                story.append(Paragraph(f"• {ticket['key']}: {summary} ({reason})", self.styles['Normal']))
+        else:
+            story.append(Paragraph("No canceled tickets found.", self.styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        # 3. Other cancelations (tickets assigned to arthur.holubov)
+        story.append(Paragraph("Other Cancelations", self.styles['Heading2']))
+        other_tickets = df[df['assignee'] == 'arthur.holubov']
+        if not other_tickets.empty:
+            for _, ticket in other_tickets.iterrows():
+                summary = ticket['summary']
+                if len(summary) > 80:
+                    summary = summary[:77] + '...'
+                # Set reason based on summary content
+                reason = 'non-infra' if 'snyk' in summary.lower() else 'No reason provided'
+                story.append(Paragraph(f"• {ticket['key']}: {summary} ({reason})", self.styles['Normal']))
+        else:
+            story.append(Paragraph("No other cancelations found.", self.styles['Normal']))
+        story.append(Spacer(1, 12))
+
         # Build the PDF
         doc.build(story)
         return report_path
