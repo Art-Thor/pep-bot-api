@@ -277,7 +277,7 @@ class ReportGenerator:
         
         # 1. Duplicate list (tickets assigned to oleg.kolomiets.contractor)
         story.append(Paragraph("Duplicate List", self.styles['Heading2']))
-        duplicate_tickets = df[df['assignee'].str.lower() == 'oleg.kolomiets.contractor']
+        duplicate_tickets = df[df['assignee'].str.lower().str.contains('oleg.*kolomiets', na=False)]
         if not duplicate_tickets.empty:
             for _, ticket in duplicate_tickets.iterrows():
                 summary = ticket['summary']
@@ -292,7 +292,7 @@ class ReportGenerator:
         story.append(Paragraph("Canceled List", self.styles['Heading2']))
         canceled_tickets = df[
             (df['status'].str.lower() == 'canceled') & 
-            (df['assignee'].str.lower() != 'oleg.kolomiets.contractor')
+            (~df['assignee'].str.lower().str.contains('oleg.*kolomiets', na=False))
         ]
         if not canceled_tickets.empty:
             for _, ticket in canceled_tickets.iterrows():
@@ -306,9 +306,9 @@ class ReportGenerator:
             story.append(Paragraph("No canceled tickets found.", self.styles['Normal']))
         story.append(Spacer(1, 12))
 
-        # 3. Other cancelations (tickets assigned to arthur.holubov)
+        # 3. Other cancelations (tickets assigned to arthur holubov)
         story.append(Paragraph("Other Cancelations", self.styles['Heading2']))
-        other_tickets = df[df['assignee'].str.lower() == 'arthur.holubov']
+        other_tickets = df[df['assignee'].str.lower().str.contains('arthur.*holubov', na=False)]
         if not other_tickets.empty:
             for _, ticket in other_tickets.iterrows():
                 summary = ticket['summary']
