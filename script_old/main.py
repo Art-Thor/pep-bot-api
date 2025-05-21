@@ -47,6 +47,77 @@ def generate_cancellation_file(df, output_file):
             f.write(f"{row['Issue key']}\t{row['Summary']}\tNo Reason Provided\n")
     print(f"Cancelled tickets saved to {output_file}.")
 
+def clean_data(df):
+    """Clean and prepare the data for visualization."""
+    # Ensure required columns exist
+    if 'summary' not in df.columns:
+        df['summary'] = df.get('Summary', '')
+    if 'priority' not in df.columns:
+        df['priority'] = df.get('Priority', '')
+    if 'status' not in df.columns:
+        df['status'] = df.get('Status', '')
+    
+    # Convert to string type to avoid any type issues
+    df['summary'] = df['summary'].astype(str)
+    df['priority'] = df['priority'].astype(str)
+    df['status'] = df['status'].astype(str)
+    
+    return df
+
+def classify_alerts(df):
+    """Classify alerts into appropriate categories."""
+    df = df.copy()
+    
+    # Initialize Alert Type column
+    df['Alert Type'] = 'Other'
+    
+    # Define patterns for classification
+    patterns = {
+        'Password Reset': ['password reset', 'reset password'],
+        'Team Change': ['team change', 'change team'],
+        'Access Management': ['access management', 'access managemen'],
+        'User Provisioning': ['user provisioning', 'provision user'],
+        'User Deprovisioning': ['user deprovisioning', 'deprovision user'],
+        'Wiz Finding': ['wiz finding', 'wiz alert'],
+        'GuardDuty': ['guardduty', 'guard duty'],
+        'Snyk': ['snyk', 'vulnerability'],
+        'Troubleshooting': ['troubleshooting', 'trouble shooting'],
+        'Outage': ['outage', 'service down']
+    }
+    
+    # Classify based on summary text
+    for alert_type, keywords in patterns.items():
+        mask = df['summary'].str.lower().str.contains('|'.join(keywords), case=False, na=False)
+        df.loc[mask, 'Alert Type'] = alert_type
+    
+    return df
+
+def define_priority(df):
+    """Define priority levels for alerts."""
+    df = df.copy()
+    
+    # Initialize Priority Level column
+    df['Priority Level'] = 'Other'
+    
+    # Map priorities
+    priority_map = {
+        'highest': 'P1',
+        'high': 'P2',
+        'medium': 'P3',
+        'low': 'P4'
+    }
+    
+    # Set priority based on priority field
+    for raw_priority, mapped_priority in priority_map.items():
+        mask = df['priority'].str.lower().str.contains(raw_priority, case=False, na=False)
+        df.loc[mask, 'Priority Level'] = mapped_priority
+    
+    # Set cancelled status
+    cancelled_mask = df['status'].str.lower().str.contains('cancelled|closed|resolved', case=False, na=False)
+    df.loc[cancelled_mask, 'Priority Level'] = 'Cancelled'
+    
+    return df
+
 def generate_report(df, outdir):
     """
     Generate all report visualizations and save them to the output directory.
@@ -104,6 +175,11 @@ def main():
     df = clean_data(df)
     df = classify_alerts(df)
     df = define_priority(df)
+    
+    # Print some debug information
+    print("\nDataFrame columns:", df.columns.tolist())
+    print("\nUnique Alert Types:", df['Alert Type'].unique())
+    print("\nUnique Priority Levels:", df['Priority Level'].unique())
     
     # Generate visualizations
     generate_report(df, args.outdir)

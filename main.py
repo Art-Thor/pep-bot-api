@@ -42,7 +42,8 @@ def handle_jira_report(ack, body, client):
 
     try:
         # 0) Run legacy generators
-        legacy_dir = run_legacy()
+        legacy_art_dir = run_legacy()
+        legacy_dir = os.path.dirname(legacy_art_dir)  # Get parent directory
 
         # Generate the report (blocking)
         report_path = report_generator.generate_report(jira_handler, legacy_dir)

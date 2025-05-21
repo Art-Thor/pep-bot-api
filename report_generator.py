@@ -1,4 +1,5 @@
 import os
+import glob
 from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -226,71 +227,103 @@ class ReportGenerator:
         story.append(Image(canceled_chart, width=6*inch, height=3*inch))
         story.append(Spacer(1, 12))
 
-        # Number of Alerts by Types and Priorities
-        df = jira_handler.get_all_tickets()
-        # Create separate PriorityFinal column
-        df['PriorityFinal'] = df['priority']
-        # Only rename cancelled tickets
-        df.loc[df['cancelled'], 'PriorityFinal'] = 'Cancelled'
-
-        # Build pivot table directly using PriorityFinal
-        pivot = (
-            df
-            .pivot_table(
-                index='alert_type',
-                columns='PriorityFinal',
-                values='key',
-                aggfunc='count',
-                fill_value=0
-            )
-        )
-        # Ensure we have all four columns in the correct order
-        for col in ['P1', 'P2', 'P3', 'Cancelled']:
-            if col not in pivot.columns:
-                pivot[col] = 0
-        pivot = pivot[['P1', 'P2', 'P3', 'Cancelled']]
-
-        # Sort by total count
-        pivot['total'] = pivot.sum(axis=1)
-        pivot = pivot.sort_values('total', ascending=False).drop(columns='total')
-
-        # Create horizontal stacked bar chart
-        fig, ax = plt.subplots(figsize=(8, max(4, 0.4*len(pivot))))
-        pivot.plot.barh(
-            stacked=True,
-            ax=ax,
-            legend=True
-        )
-        ax.set_title('Number of Alerts by Types and Priorities')
-        ax.set_xlabel('Count')
-        ax.set_ylabel('Alert Type')
-        ax.legend(title='Priority', bbox_to_anchor=(1.02, 1), loc='upper left')
-        plt.tight_layout()
-
-        chart_path = os.path.join(CHART_DIR, 'alerts_by_type_priority.png')
-        fig.savefig(chart_path, bbox_inches='tight')
-        plt.close(fig)
-
-        story.append(Paragraph("Number of Alerts by Types and Priorities", self.styles['Heading2']))
-        story.append(Image(chart_path, width=6*inch, height=4*inch))
+        # === Legacy visualizations ===
+        story.append(Paragraph("Legacy Visualizations", self.styles['Heading1']))
         story.append(Spacer(1, 12))
 
-        # Legacy widgets
-        legacy_widgets = [
-            ('Priority Distribution', 'priority_distribution.png'),
-            ('Cluster Distribution', 'cluster_distribution.png'),
-            ('Namespace Distribution', 'namespace_distribution.png'),
-            ('Weekly Trend', 'weekly_trend.png'),
-            ('P1 Alerts', 'p1_alerts.png')
+        artifacts_dir = os.path.join(legacy_dir, 'artifacts')
+        print(f"Looking for legacy visualizations in: {artifacts_dir}")
+        
+        # Define title mapping for specific files
+        title_mapping = {
+            'priority_distribution.png': 'Priority Distribution',
+            'cluster_distribution.png': 'Cluster Distribution',
+            'namespace_distribution.png': 'Namespace Distribution',
+            'weekly_trend.png': 'Weekly Trend',
+            'p1_alerts.png': 'P1 Alerts'
+        }
+
+        # First, add alerts_by_type_priority.png if it exists
+        priority_chart = os.path.join(artifacts_dir, 'alerts_by_type_priority.png')
+        if os.path.exists(priority_chart):
+            print(f"Adding priority chart: {priority_chart}")
+            story.append(Paragraph("Number of Alerts by Types and Priorities", self.styles['Heading2']))
+            story.append(Image(priority_chart, width=6*inch, height=4*inch))
+            story.append(Spacer(1, 12))
+
+        # Then add all other PNG files
+        png_files = sorted(glob.glob(os.path.join(artifacts_dir, '*.png')))
+        print(f"Found {len(png_files)} PNG files in artifacts directory")
+        
+        for img_path in png_files:
+            filename = os.path.basename(img_path)
+            if filename == 'alerts_by_type_priority.png':
+                continue  # Skip as we've already added it
+            
+            print(f"Adding visualization: {filename}")
+            # Get title from mapping or use filename
+            title = title_mapping.get(filename, filename.replace('.png', '').replace('_', ' ').title())
+            
+            story.append(Paragraph(title, self.styles['Heading2']))
+            story.append(Image(img_path, width=6*inch, height=4*inch))
+            story.append(Spacer(1, 12))
+
+        # === Ticket Lists ===
+        story.append(Paragraph("Ticket Lists", self.styles['Heading1']))
+        story.append(Spacer(1, 12))
+
+        # Get all tickets
+        df = jira_handler.get_all_tickets()
+        
+        # 1. Duplicate list (tickets assigned to oleg.kolomiets.contractor)
+        story.append(Paragraph("Duplicate List", self.styles['Heading2']))
+        duplicate_tickets = df[df['assignee'].str.lower() == 'oleg.kolomiets.contractor']
+        if not duplicate_tickets.empty:
+            for _, ticket in duplicate_tickets.iterrows():
+                summary = ticket['summary']
+                if len(summary) > 80:
+                    summary = summary[:77] + '...'
+                story.append(Paragraph(f"• {ticket['key']}: {summary}", self.styles['Normal']))
+        else:
+            story.append(Paragraph("No duplicate tickets found.", self.styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        # 2. Canceled list (tickets with status 'canceled' but not assigned to oleg.kolomiets.contractor)
+        story.append(Paragraph("Canceled List", self.styles['Heading2']))
+        canceled_tickets = df[
+            (df['status'].str.lower() == 'canceled') & 
+            (df['assignee'].str.lower() != 'oleg.kolomiets.contractor')
         ]
+        if not canceled_tickets.empty:
+            for _, ticket in canceled_tickets.iterrows():
+                summary = ticket['summary']
+                if len(summary) > 80:
+                    summary = summary[:77] + '...'
+                # Get resolution reason
+                reason = ticket['resolution'] if pd.notna(ticket['resolution']) else 'No reason provided'
+                story.append(Paragraph(f"• {ticket['key']}: {summary} ({reason})", self.styles['Normal']))
+        else:
+            story.append(Paragraph("No canceled tickets found.", self.styles['Normal']))
+        story.append(Spacer(1, 12))
 
-        for title, filename in legacy_widgets:
-            img_path = os.path.join(legacy_dir, filename)
-            if os.path.exists(img_path):
-                story.append(Paragraph(title, self.styles['Heading2']))
-                story.append(Image(img_path, width=6*inch, height=4*inch))
-                story.append(Spacer(1, 12))
+        # 3. Other cancelations (tickets assigned to arthur.holubov)
+        story.append(Paragraph("Other Cancelations", self.styles['Heading2']))
+        other_tickets = df[df['assignee'].str.lower() == 'arthur.holubov']
+        if not other_tickets.empty:
+            for _, ticket in other_tickets.iterrows():
+                summary = ticket['summary']
+                if len(summary) > 80:
+                    summary = summary[:77] + '...'
+                # Set reason based on summary content or resolution
+                if 'snyk' in summary.lower():
+                    reason = 'non-infra'
+                else:
+                    reason = ticket['resolution'] if pd.notna(ticket['resolution']) else 'No reason provided'
+                story.append(Paragraph(f"• {ticket['key']}: {summary} ({reason})", self.styles['Normal']))
+        else:
+            story.append(Paragraph("No other cancelations found.", self.styles['Normal']))
+        story.append(Spacer(1, 12))
 
-        # Build and save
+        # Build the PDF
         doc.build(story)
         return report_path
