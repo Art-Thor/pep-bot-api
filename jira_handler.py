@@ -34,20 +34,55 @@ class JiraHandler:
         self._priority_history = {}
 
     def _track_priority_change(self, issue_key: str, new_priority: str, timestamp: datetime = None):
-        """Track priority changes for a ticket."""
+        """Track priority changes for a ticket, excluding those made by Automation for Jira."""
         if timestamp is None:
             timestamp = datetime.now()
-            
+        
+        # Skip if this is the first time we're seeing this ticket
         if issue_key not in self._priority_history:
-            self._priority_history[issue_key] = []
-            
-        self._priority_history[issue_key].append({
-            'priority': new_priority,
-            'timestamp': timestamp
-        })
+            self._priority_history[issue_key] = [{
+                'priority': new_priority,
+                'timestamp': timestamp
+            }]
+            return
+        
+        # Get the last recorded priority
+        last_change = self._priority_history[issue_key][-1]
+        
+        # Only track if the priority actually changed
+        if last_change['priority'] != new_priority:
+            # Check if this change was made by Automation for Jira
+            if USE_JIRA_API:
+                try:
+                    issue = self.jira.issue(issue_key, expand='changelog')
+                    for history in issue.changelog.histories:
+                        for item in history.items:
+                            if item.field == 'priority' and item.toString == new_priority:
+                                # If the change was made by Automation for Jira, skip it
+                                if history.author.displayName == 'Automation for Jira':
+                                    return  # Do not record this change
+                                # Otherwise, record the manual change
+                                self._priority_history[issue_key].append({
+                                    'priority': new_priority,
+                                    'timestamp': timestamp
+                                })
+                                return
+                except Exception as e:
+                    logger.warning(f"Could not fetch changelog for {issue_key}: {str(e)}")
+                    # If we can't fetch the changelog, assume it's a manual change
+                    self._priority_history[issue_key].append({
+                        'priority': new_priority,
+                        'timestamp': timestamp
+                    })
+            else:
+                # If API is disabled, assume it's a manual change
+                self._priority_history[issue_key].append({
+                    'priority': new_priority,
+                    'timestamp': timestamp
+                })
 
     def get_priority_history(self, issue_key: str = None):
-        """Get priority change history for a specific ticket or all tickets."""
+        """Get priority change history for a specific ticket or all tickets (only manual changes)."""
         if issue_key:
             return self._priority_history.get(issue_key, [])
         return self._priority_history

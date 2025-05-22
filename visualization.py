@@ -82,22 +82,25 @@ def plot_priority_changes(priority_history: dict) -> str:
     """
     Creates a visualization of priority changes over time for tickets.
     Returns the path to the saved image.
+    Only manual (non-automated) changes are shown.
     """
     # Convert history to DataFrame
     records = []
     for ticket_key, changes in priority_history.items():
         for change in changes:
-            records.append({
-                'ticket': ticket_key,
-                'priority': change['priority'],
-                'timestamp': change['timestamp']
-            })
+            # Only include manual changes
+            if not change.get('is_automated', False):
+                records.append({
+                    'ticket': ticket_key,
+                    'priority': change['priority'],
+                    'timestamp': change['timestamp']
+                })
     
     if not records:
         # Create empty plot with message
         fig, ax = plt.subplots(figsize=(8, 4))
         ax.axis('off')
-        ax.text(0.5, 0.5, 'No priority changes recorded', 
+        ax.text(0.5, 0.5, 'No manual priority changes recorded', 
                 horizontalalignment='center',
                 verticalalignment='center',
                 transform=ax.transAxes,
@@ -113,14 +116,22 @@ def plot_priority_changes(priority_history: dict) -> str:
         for ticket in df['ticket'].unique():
             ticket_data = df[df['ticket'] == ticket]
             ax.plot(ticket_data['timestamp'], ticket_data['priority'], 
-                   marker='o', label=ticket, linestyle='-')
+                   marker='o', label=ticket, linestyle='-', linewidth=2)
         
         # Customize plot
-        ax.set_title('Ticket Priority Changes Over Time')
+        ax.set_title('Ticket Manual Priority Changes Over Time')
         ax.set_xlabel('Time')
         ax.set_ylabel('Priority')
         plt.xticks(rotation=45)
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        
+        # Create legend with fewer entries to avoid overcrowding
+        handles, labels = ax.get_legend_handles_labels()
+        if len(handles) > 10:
+            ax.legend(handles[:10], labels[:10], 
+                     bbox_to_anchor=(1.05, 1), loc='upper left',
+                     title='Tickets (showing first 10)')
+        else:
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout()
     
     # Save the plot
