@@ -21,7 +21,8 @@ from visualization import (
     plot_priority_levels,
     plot_cluster_distribution,
     plot_namespace_distribution,
-    plot_p1_alerts
+    plot_p1_alerts,
+    plot_priority_changes
 )
 
 class ReportGenerator:
@@ -109,6 +110,20 @@ class ReportGenerator:
                 f"Cancelled/Resolved: {df['status'].str.lower().isin(['cancelled', 'closed', 'resolved']).sum()}",
                 self.styles['Normal']
             ),
+            Spacer(1, 12)
+        ]))
+
+        # Add Priority Changes section
+        story.append(KeepTogether([
+            Paragraph("Priority Changes", self.styles['Heading2']),
+            Spacer(1, 6)
+        ]))
+        
+        # Generate and add priority changes visualization
+        priority_history = jira_handler.get_priority_history()
+        priority_changes_path = plot_priority_changes(priority_history)
+        story.append(KeepTogether([
+            self._make_image(priority_changes_path),
             Spacer(1, 12)
         ]))
 

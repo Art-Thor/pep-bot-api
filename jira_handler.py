@@ -30,6 +30,27 @@ class JiraHandler:
             logger.warning("Jira API is disabled. Using static data only.")
         # Simple in-memory cache
         self._cache = {} if ENABLE_CACHING else None
+        # Priority change history
+        self._priority_history = {}
+
+    def _track_priority_change(self, issue_key: str, new_priority: str, timestamp: datetime = None):
+        """Track priority changes for a ticket."""
+        if timestamp is None:
+            timestamp = datetime.now()
+            
+        if issue_key not in self._priority_history:
+            self._priority_history[issue_key] = []
+            
+        self._priority_history[issue_key].append({
+            'priority': new_priority,
+            'timestamp': timestamp
+        })
+
+    def get_priority_history(self, issue_key: str = None):
+        """Get priority change history for a specific ticket or all tickets."""
+        if issue_key:
+            return self._priority_history.get(issue_key, [])
+        return self._priority_history
 
     def _fetch_issues(self, template_key):
         """Fetch issues from Jira using JQL template with pagination."""
@@ -87,8 +108,13 @@ class JiraHandler:
             priority = PRIORITY_MAP.get(raw_priority, raw_priority)
             status = fields.status.name if fields.status else 'Unknown'
             created = getattr(fields, 'created', None)
+            updated = getattr(fields, 'updated', None)
             assignee = fields.assignee.displayName if fields.assignee else 'Unassigned'
             resolution = fields.resolution.name if fields.resolution else ''
+            
+            # Track priority change
+            self._track_priority_change(issue.key, priority, updated)
+            
             # Extraction
             cluster = self._extract_pattern(summary, 'cluster')
             namespace = self._extract_pattern(summary, 'namespace')
@@ -102,6 +128,7 @@ class JiraHandler:
                 'priority': priority,
                 'status': status,
                 'created': created,
+                'updated': updated,
                 'cluster': cluster,
                 'namespace': namespace,
                 'assignee': assignee,

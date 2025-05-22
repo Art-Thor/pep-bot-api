@@ -77,3 +77,54 @@ def plot_p1_alerts(df: pd.DataFrame) -> str:
     fig.savefig(path, bbox_inches='tight')
     plt.close(fig)
     return path
+
+def plot_priority_changes(priority_history: dict) -> str:
+    """
+    Creates a visualization of priority changes over time for tickets.
+    Returns the path to the saved image.
+    """
+    # Convert history to DataFrame
+    records = []
+    for ticket_key, changes in priority_history.items():
+        for change in changes:
+            records.append({
+                'ticket': ticket_key,
+                'priority': change['priority'],
+                'timestamp': change['timestamp']
+            })
+    
+    if not records:
+        # Create empty plot with message
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.axis('off')
+        ax.text(0.5, 0.5, 'No priority changes recorded', 
+                horizontalalignment='center',
+                verticalalignment='center',
+                transform=ax.transAxes,
+                fontsize=14)
+    else:
+        df = pd.DataFrame(records)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        
+        # Create figure
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Plot each ticket's priority changes
+        for ticket in df['ticket'].unique():
+            ticket_data = df[df['ticket'] == ticket]
+            ax.plot(ticket_data['timestamp'], ticket_data['priority'], 
+                   marker='o', label=ticket, linestyle='-')
+        
+        # Customize plot
+        ax.set_title('Ticket Priority Changes Over Time')
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Priority')
+        plt.xticks(rotation=45)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+    
+    # Save the plot
+    path = os.path.join(CHART_DIR, 'priority_changes.png')
+    fig.savefig(path, bbox_inches='tight')
+    plt.close(fig)
+    return path
