@@ -139,6 +139,7 @@ PRIORITY_MAP = {
     'High':    'P2',
     'Medium':  'P3',
     'Low':     'P4',
+    'Lowest':  'P5',
     'Unassigned': 'Unknown'
 }
 
