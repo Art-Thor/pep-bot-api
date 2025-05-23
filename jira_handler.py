@@ -16,6 +16,12 @@ from classification import classify_priorities, assign_alert_type
 
 logger = logging.getLogger(__name__)
 
+# One place to maintain all "bot" accounts we want to ignore
+IGNORED_PRIORITY_AUTHORS = {
+    "automation-for-jira",          # accountId or key
+    "Automation for Jira",          # displayName fallback
+}
+
 class JiraHandler:
     def __init__(self):
         # Initialize Jira client only if API is enabled
@@ -30,6 +36,27 @@ class JiraHandler:
             logger.warning("Jira API is disabled. Using static data only.")
         # Simple in-memory cache
         self._cache = {} if ENABLE_CACHING else None
+        # Priority change history
+        self._priority_history = {}
+
+    def _track_priority_change(self, issue_key: str, new_priority: str, timestamp: datetime = None):
+        """Track priority changes for a ticket."""
+        if timestamp is None:
+            timestamp = datetime.now()
+            
+        if issue_key not in self._priority_history:
+            self._priority_history[issue_key] = []
+            
+        self._priority_history[issue_key].append({
+            'priority': new_priority,
+            'timestamp': timestamp
+        })
+
+    def get_priority_history(self, issue_key: str = None):
+        """Get priority change history for a specific ticket or all tickets."""
+        if issue_key:
+            return self._priority_history.get(issue_key, [])
+        return self._priority_history
 
     def _fetch_issues(self, template_key):
         """Fetch issues from Jira using JQL template with pagination."""
@@ -87,8 +114,35 @@ class JiraHandler:
             priority = PRIORITY_MAP.get(raw_priority, raw_priority)
             status = fields.status.name if fields.status else 'Unknown'
             created = getattr(fields, 'created', None)
+            updated = getattr(fields, 'updated', None)
             assignee = fields.assignee.displayName if fields.assignee else 'Unassigned'
             resolution = fields.resolution.name if fields.resolution else ''
+            
+            # --- priority-change history ------------------------------------- #
+            # Pull the full issue with changelog so we can see *who* changed it
+            try:
+                issue_full = self.jira.issue(issue.key, expand="changelog")
+            except Exception as e:
+                logger.warning(f"Cannot expand changelog for {issue.key}: {e}")
+                issue_full = None
+
+            if issue_full and hasattr(issue_full, "changelog"):
+                for history in issue_full.changelog.histories:
+                    author_id   = getattr(history.author, "accountId", None) or getattr(history.author, "key", "")
+                    author_name = history.author.displayName
+
+                    # Skip if the author is in the ignore-list (by id OR name)
+                    if author_id in IGNORED_PRIORITY_AUTHORS or author_name in IGNORED_PRIORITY_AUTHORS:
+                        continue
+
+                    for item in history.items:
+                        if item.field == "priority":
+                            self._track_priority_change(
+                                issue.key,
+                                f"{item.fromString}->{item.toString}",
+                                datetime.strptime(history.created[:19], "%Y-%m-%dT%H:%M:%S"),
+                            )
+            
             # Extraction
             cluster = self._extract_pattern(summary, 'cluster')
             namespace = self._extract_pattern(summary, 'namespace')
@@ -102,6 +156,7 @@ class JiraHandler:
                 'priority': priority,
                 'status': status,
                 'created': created,
+                'updated': updated,
                 'cluster': cluster,
                 'namespace': namespace,
                 'assignee': assignee,
