@@ -1,6 +1,7 @@
 # src/classification.py
 
 import re
+from config import PRIORITY_MAP
 
 def classify_alerts(df):
     """
@@ -115,23 +116,12 @@ def define_priority(df):
     """
     Function to determine the priority of an alert.
     """
-    def get_priority(row):
-        assignee = str(row['Assignee']).lower()
-        summary = str(row['Summary']).lower()
-        priority = str(row['Priority']).lower()
-        status = str(row['Status']).lower()  # Добавили получение статуса тикета
-
-        if 'oleg.kolomiets.contractor' in assignee or status == 'canceled':
-            return 'Cancelled'
-        elif '[p1]' in summary or priority == 'highest' or 'p1' in summary or '[p1]' in summary:
-            return 'P1'
-        elif '[p2]' in summary or priority == 'high' or 'p2' in summary or '[p2]' in summary:
-            return 'P2'
-        elif '[p3]' in summary or priority == 'medium' or 'p3' in summary or '[p3]' in summary:
-            return 'P3'
-        else:
-            return 'Other'
-
-    df['Priority Level'] = df.apply(get_priority, axis=1)
-
+    # Normalize and map priorities case-insensitively
+    norm_priority = df['Priority'].astype(str).str.strip().str.title()
+    mapped = norm_priority.map(PRIORITY_MAP)
+    # If status is canceled, mark as Cancelled
+    status = df['Status'].astype(str).str.lower()
+    cancelled_mask = status.isin(['canceled', 'cancelled', 'closed', 'resolved'])
+    df['Priority Level'] = mapped.fillna(norm_priority)
+    df.loc[cancelled_mask, 'Priority Level'] = 'Cancelled'
     return df

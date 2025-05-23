@@ -16,6 +16,12 @@ from classification import classify_priorities, assign_alert_type
 
 logger = logging.getLogger(__name__)
 
+# One place to maintain all "bot" accounts we want to ignore
+IGNORED_PRIORITY_AUTHORS = {
+    "automation-for-jira",          # accountId or key
+    "Automation for Jira",          # displayName fallback
+}
+
 class JiraHandler:
     def __init__(self):
         # Initialize Jira client only if API is enabled
@@ -34,55 +40,20 @@ class JiraHandler:
         self._priority_history = {}
 
     def _track_priority_change(self, issue_key: str, new_priority: str, timestamp: datetime = None):
-        """Track priority changes for a ticket, excluding those made by Automation for Jira."""
+        """Track priority changes for a ticket."""
         if timestamp is None:
             timestamp = datetime.now()
-        
-        # Skip if this is the first time we're seeing this ticket
+            
         if issue_key not in self._priority_history:
-            self._priority_history[issue_key] = [{
-                'priority': new_priority,
-                'timestamp': timestamp
-            }]
-            return
-        
-        # Get the last recorded priority
-        last_change = self._priority_history[issue_key][-1]
-        
-        # Only track if the priority actually changed
-        if last_change['priority'] != new_priority:
-            # Check if this change was made by Automation for Jira
-            if USE_JIRA_API:
-                try:
-                    issue = self.jira.issue(issue_key, expand='changelog')
-                    for history in issue.changelog.histories:
-                        for item in history.items:
-                            if item.field == 'priority' and item.toString == new_priority:
-                                # If the change was made by Automation for Jira, skip it
-                                if history.author.displayName == 'Automation for Jira':
-                                    return  # Do not record this change
-                                # Otherwise, record the manual change
-                                self._priority_history[issue_key].append({
-                                    'priority': new_priority,
-                                    'timestamp': timestamp
-                                })
-                                return
-                except Exception as e:
-                    logger.warning(f"Could not fetch changelog for {issue_key}: {str(e)}")
-                    # If we can't fetch the changelog, assume it's a manual change
-                    self._priority_history[issue_key].append({
-                        'priority': new_priority,
-                        'timestamp': timestamp
-                    })
-            else:
-                # If API is disabled, assume it's a manual change
-                self._priority_history[issue_key].append({
-                    'priority': new_priority,
-                    'timestamp': timestamp
-                })
+            self._priority_history[issue_key] = []
+            
+        self._priority_history[issue_key].append({
+            'priority': new_priority,
+            'timestamp': timestamp
+        })
 
     def get_priority_history(self, issue_key: str = None):
-        """Get priority change history for a specific ticket or all tickets (only manual changes)."""
+        """Get priority change history for a specific ticket or all tickets."""
         if issue_key:
             return self._priority_history.get(issue_key, [])
         return self._priority_history
@@ -147,8 +118,30 @@ class JiraHandler:
             assignee = fields.assignee.displayName if fields.assignee else 'Unassigned'
             resolution = fields.resolution.name if fields.resolution else ''
             
-            # Track priority change
-            self._track_priority_change(issue.key, priority, updated)
+            # --- priority-change history ------------------------------------- #
+            # Pull the full issue with changelog so we can see *who* changed it
+            try:
+                issue_full = self.jira.issue(issue.key, expand="changelog")
+            except Exception as e:
+                logger.warning(f"Cannot expand changelog for {issue.key}: {e}")
+                issue_full = None
+
+            if issue_full and hasattr(issue_full, "changelog"):
+                for history in issue_full.changelog.histories:
+                    author_id   = getattr(history.author, "accountId", None) or getattr(history.author, "key", "")
+                    author_name = history.author.displayName
+
+                    # Skip if the author is in the ignore-list (by id OR name)
+                    if author_id in IGNORED_PRIORITY_AUTHORS or author_name in IGNORED_PRIORITY_AUTHORS:
+                        continue
+
+                    for item in history.items:
+                        if item.field == "priority":
+                            self._track_priority_change(
+                                issue.key,
+                                f"{item.fromString}->{item.toString}",
+                                datetime.strptime(history.created[:19], "%Y-%m-%dT%H:%M:%S"),
+                            )
             
             # Extraction
             cluster = self._extract_pattern(summary, 'cluster')

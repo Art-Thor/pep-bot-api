@@ -1,5 +1,6 @@
 import pandas as pd
 from config import PRIORITY_MAP, EXTRACTION_PATTERNS
+import logging
 
 def assign_alert_type(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -32,5 +33,12 @@ def classify_priorities(df: pd.DataFrame) -> pd.DataFrame:
     """
     if df.empty or 'priority' not in df.columns:
         return df
-    df['priority'] = df['priority'].map(PRIORITY_MAP).fillna('Unknown')
+    # Normalize and map priorities case-insensitively
+    norm_priority = df['priority'].astype(str).str.strip().str.title()
+    mapped = norm_priority.map(PRIORITY_MAP)
+    # Log any unknown priorities
+    unknowns = norm_priority[~norm_priority.isin(PRIORITY_MAP.keys())].unique()
+    if len(unknowns) > 0:
+        logging.warning(f"Unknown priorities encountered: {unknowns}")
+    df['priority'] = mapped.fillna(norm_priority)
     return df

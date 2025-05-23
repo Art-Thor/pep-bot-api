@@ -187,3 +187,15 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    # Unit test for priority mapping
+    test_df = pd.DataFrame({
+        'Issue key': ['TEST-1'],
+        'Summary': ['Test summary'],
+        'Status': ['Open'],
+        'Priority': ['Highest'],
+        'Assignee': ['user']
+    })
+    result = define_priority(test_df)
+    assert (result['Priority Level'] == 'P1').any(), "Priority mapping failed: 'Highest' should map to 'P1'"
+    print("Unit test passed: 'Highest' is mapped to 'P1' in Priority Level.")
