@@ -336,24 +336,6 @@ class ReportGenerator:
             story.append(Paragraph("No other cancelations found.", self.styles['Normal']))
         story.append(Spacer(1, 12))
 
-        # 4. P1, P2, P3, and Canceled ticket tables
-        for prio, label in [("P1", "P1 Tickets"), ("P2", "P2 Tickets"), ("P3", "P3 Tickets")]:
-            img_path = plot_ticket_table(df, priority=prio, filename=f'{prio.lower()}_alerts.png')
-            story.append(KeepTogether([
-                Paragraph(label, self.styles['Heading2']),
-                Spacer(1, 6),
-                self._make_image(img_path),
-                Spacer(1, 12)
-            ]))
-        # Canceled tickets table
-        img_path = plot_ticket_table(df, status='canceled', filename='canceled_alerts.png')
-        story.append(KeepTogether([
-            Paragraph("Canceled Tickets Table", self.styles['Heading2']),
-            Spacer(1, 6),
-            self._make_image(img_path),
-            Spacer(1, 12)
-        ]))
-
         # Build the PDF
         doc.build(story)
         return report_path

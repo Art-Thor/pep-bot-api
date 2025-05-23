@@ -64,13 +64,42 @@ def clean_data(df):
     
     return df
 
+def align_columns(df):
+    """
+    Приводим заголовки к lower case и дублируем critical поля,
+    чтобы дальше всегда был df['priority'], df['summary'] и т.п.
+    """
+    rename_map = {c: c.lower() for c in df.columns}
+    df = df.rename(columns=rename_map)
+    # legacy-совместимость: создаём alias, если нужно
+    if "priority" not in df.columns and "Priority" in rename_map:
+        df["priority"] = df["Priority"]
+    if "summary" not in df.columns and "Summary" in rename_map:
+        df["summary"] = df["Summary"]
+    if "status" not in df.columns and "Status" in rename_map:
+        df["status"] = df["Status"]
+    if "assignee" not in df.columns and "Assignee" in rename_map:
+        df["assignee"] = df["Assignee"]
+    # Ensure 'alert type' is always lowercase
+    if "Alert Type" in df.columns:
+        df.rename(columns={"Alert Type": "alert type"}, inplace=True)
+    return df
+
+# PRIORITY_MAP для скрипта
+PRIORITY_MAP = {
+    "highest": "P1",
+    "high":    "P2",
+    "medium":  "P3",
+    "low":     "P4",
+    "lowest":  "P5",
+    "cancelled": "Cancelled",
+}
+
 def classify_alerts(df):
     """Classify alerts into appropriate categories."""
     df = df.copy()
-    
-    # Initialize Alert Type column
-    df['Alert Type'] = 'Other'
-    
+    # Initialize alert type column in lowercase
+    df['alert type'] = 'Other'
     # Define patterns for classification
     patterns = {
         'Password Reset': ['password reset', 'reset password'],
@@ -84,38 +113,23 @@ def classify_alerts(df):
         'Troubleshooting': ['troubleshooting', 'trouble shooting'],
         'Outage': ['outage', 'service down']
     }
-    
     # Classify based on summary text
     for alert_type, keywords in patterns.items():
         mask = df['summary'].str.lower().str.contains('|'.join(keywords), case=False, na=False)
-        df.loc[mask, 'Alert Type'] = alert_type
-    
+        df.loc[mask, 'alert type'] = alert_type
     return df
 
 def define_priority(df):
-    """Define priority levels for alerts."""
-    df = df.copy()
-    
-    # Initialize Priority Level column
-    df['Priority Level'] = 'Other'
-    
-    # Map priorities
-    priority_map = {
-        'highest': 'P1',
-        'high': 'P2',
-        'medium': 'P3',
-        'low': 'P4'
-    }
-    
-    # Set priority based on priority field
-    for raw_priority, mapped_priority in priority_map.items():
-        mask = df['priority'].str.lower().str.contains(raw_priority, case=False, na=False)
-        df.loc[mask, 'Priority Level'] = mapped_priority
-    
-    # Set cancelled status
-    cancelled_mask = df['status'].str.lower().str.contains('cancelled|closed|resolved', case=False, na=False)
-    df.loc[cancelled_mask, 'Priority Level'] = 'Cancelled'
-    
+    # align_columns(df) call removed!
+    # присваиваем Priority Level, если ещё нет
+    if "priority level" not in df.columns:
+        df["Priority Level"] = (
+            df["priority"]
+            .str.lower()
+            .map(PRIORITY_MAP)
+            .fillna("Other")
+        )
+    # если нужен фильтр P1-тикетов
     return df
 
 def generate_report(df, outdir):
@@ -170,6 +184,7 @@ def main():
     
     # Load data
     df = pd.read_json(args.dump)
+    df = align_columns(df)
     
     # Process data
     df = clean_data(df)
@@ -178,7 +193,7 @@ def main():
     
     # Print some debug information
     print("\nDataFrame columns:", df.columns.tolist())
-    print("\nUnique Alert Types:", df['Alert Type'].unique())
+    print("\nUnique Alert Types:", df['alert type'].unique())
     print("\nUnique Priority Levels:", df['Priority Level'].unique())
     
     # Generate visualizations
@@ -196,6 +211,7 @@ if __name__ == '__main__':
         'Priority': ['Highest'],
         'Assignee': ['user']
     })
+    test_df = align_columns(test_df)  # Ensure lowercase columns for test
     result = define_priority(test_df)
     assert (result['Priority Level'] == 'P1').any(), "Priority mapping failed: 'Highest' should map to 'P1'"
     print("Unit test passed: 'Highest' is mapped to 'P1' in Priority Level.")

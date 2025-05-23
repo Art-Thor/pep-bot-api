@@ -107,11 +107,9 @@ def plot_alert_types_with_priority(df):
     Excludes user-side requests from the visualization.
     """
     # Exclude user-side requests
-    df_filtered = df[~df['Alert Type'].isin(user_request_types)]
-    
+    df_filtered = df[~df['alert type'].isin(user_request_types)]
     # Create a pivot table
-    alert_priority_counts = df_filtered.groupby(['Alert Type', 'Priority Level']).size().reset_index(name='Counts')
-    
+    alert_priority_counts = df_filtered.groupby(['alert type', 'Priority Level']).size().reset_index(name='Counts')
     if alert_priority_counts.empty:
         # Return a placeholder figure
         fig = plt.figure(figsize=(8, 4))
@@ -123,27 +121,20 @@ def plot_alert_types_with_priority(df):
                 fontsize=14)
         plt.tight_layout()
         return fig
-
     # Create pivot table
-    pivot = alert_priority_counts.pivot(index='Alert Type', columns='Priority Level', values='Counts').fillna(0)
-    
+    pivot = alert_priority_counts.pivot(index='alert type', columns='Priority Level', values='Counts').fillna(0)
     # Sort by total count
     pivot['total'] = pivot.sum(axis=1)
     pivot = pivot.sort_values('total', ascending=False).drop(columns='total')
-    
     # Create figure
     fig, ax = plt.subplots(figsize=(12, max(6, len(pivot) * 0.5)))
-    
     # Plot stacked bar chart
     pivot.plot(kind='barh', stacked=True, ax=ax, color=[priority_colors.get(col, '#95A5A6') for col in pivot.columns])
-    
     plt.title('Number of Alerts by Types and Priorities', fontsize=14)
     plt.xlabel('Count', fontsize=12)
     plt.ylabel('Alert Type', fontsize=12)
-    
     # Adjust layout
     plt.tight_layout()
-    
     return fig
 
 def plot_user_requests_by_priority(df):
@@ -151,11 +142,9 @@ def plot_user_requests_by_priority(df):
     Function to create a bar chart for user-side requests with a breakdown by priorities.
     """
     # Include only user-side requests
-    df_filtered = df[df['Alert Type'].isin(user_request_types)]
-    
+    df_filtered = df[df['alert type'].isin(user_request_types)]
     # Create a pivot table
-    alert_priority_counts = df_filtered.groupby(['Alert Type', 'Priority Level']).size().reset_index(name='Counts')
-    
+    alert_priority_counts = df_filtered.groupby(['alert type', 'Priority Level']).size().reset_index(name='Counts')
     if alert_priority_counts.empty:
         # Return a placeholder figure
         fig = plt.figure(figsize=(8, 4))
@@ -167,27 +156,20 @@ def plot_user_requests_by_priority(df):
                 fontsize=14)
         plt.tight_layout()
         return fig
-
     # Create pivot table
-    pivot = alert_priority_counts.pivot(index='Alert Type', columns='Priority Level', values='Counts').fillna(0)
-    
+    pivot = alert_priority_counts.pivot(index='alert type', columns='Priority Level', values='Counts').fillna(0)
     # Sort by total count
     pivot['total'] = pivot.sum(axis=1)
     pivot = pivot.sort_values('total', ascending=False).drop(columns='total')
-    
     # Create figure
     fig, ax = plt.subplots(figsize=(12, max(6, len(pivot) * 0.5)))
-    
     # Plot stacked bar chart
     pivot.plot(kind='barh', stacked=True, ax=ax, color=[priority_colors.get(col, '#95A5A6') for col in pivot.columns])
-    
     plt.title('User Requests by Types and Priorities', fontsize=14)
     plt.xlabel('Count', fontsize=12)
     plt.ylabel('Request Type', fontsize=12)
-    
     # Adjust layout
     plt.tight_layout()
-    
     return fig
 
 def plot_priority_pie(df):
@@ -228,7 +210,12 @@ def plot_p1_alerts(df):
     """
     Function to create an image with a list of P1 alerts (ID and summaries).
     """
-    p1_alerts = df[df['Priority Level'] == 'P1'][['Issue key', 'Summary']]
+    # Use lowercase column names to match align_columns()
+    try:
+        p1_alerts = df[df['Priority Level'] == 'P1'][['issue key', 'summary']]
+    except KeyError:
+        print("plot_p1_alerts: Available columns:", df.columns.tolist())
+        raise
 
     if p1_alerts.empty:
         print("No P1 alerts.")
