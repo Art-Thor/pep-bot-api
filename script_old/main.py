@@ -24,23 +24,23 @@ def generate_cancellation_file(df, output_file):
     """
     Generate a text file with canceled tickets for manual input of cancellation reasons.
     """
-    # Убедимся, что 'Assignee' не содержит NaN
+    # Make sure that 'Assignee' does not contain NaN
     df['Assignee'] = df['Assignee'].fillna('Unassigned')
 
-    # Используем 'Status' вместо 'Priority Level'
+    # Use 'Status' instead of 'Priority Level'
     canceled_tickets = df[
         (df['Status'].str.lower() == 'canceled') &
         (df['Assignee'].str.contains('oleg.kolomiets.contractor|max.ivanchenko|arthur holubov|unassigned', na=False))
     ][['Issue key', 'Summary']]
 
     print("Filtered canceled tickets:")
-    print(canceled_tickets)  # Проверка на фильтрацию
+    print(canceled_tickets)  # Check filtering
 
     if canceled_tickets.empty:
         print("No canceled tickets found.")
         return
     
-    # Генерация файла
+    # Generate file
     with open(output_file, 'w') as f:
         f.write("Ticket ID\tSummary\tReason\n")
         for _, row in canceled_tickets.iterrows():
@@ -66,12 +66,12 @@ def clean_data(df):
 
 def align_columns(df):
     """
-    Приводим заголовки к lower case и дублируем critical поля,
-    чтобы дальше всегда был df['priority'], df['summary'] и т.п.
+    Convert column names to lower case and duplicate critical fields,
+    so that df['priority'], df['summary'], etc. always exist.
     """
     rename_map = {c: c.lower() for c in df.columns}
     df = df.rename(columns=rename_map)
-    # legacy-совместимость: создаём alias, если нужно
+    # legacy compatibility: create alias if needed
     if "priority" not in df.columns and "Priority" in rename_map:
         df["priority"] = df["Priority"]
     if "summary" not in df.columns and "Summary" in rename_map:
@@ -85,7 +85,7 @@ def align_columns(df):
         df.rename(columns={"Alert Type": "alert type"}, inplace=True)
     return df
 
-# PRIORITY_MAP для скрипта
+# PRIORITY_MAP for script
 PRIORITY_MAP = {
     "highest": "P1",
     "high":    "P2",
@@ -121,7 +121,7 @@ def classify_alerts(df):
 
 def define_priority(df):
     # align_columns(df) call removed!
-    # присваиваем Priority Level, если ещё нет
+    # Assign Priority Level if not already present
     if "priority level" not in df.columns:
         df["Priority Level"] = (
             df["priority"]
@@ -129,7 +129,7 @@ def define_priority(df):
             .map(PRIORITY_MAP)
             .fillna("Other")
         )
-    # если нужен фильтр P1-тикетов
+    # if you need to filter P1 tickets
     return df
 
 def generate_report(df, outdir):
