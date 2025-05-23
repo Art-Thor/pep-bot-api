@@ -5,7 +5,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 
-from config import SLACK_BOT_TOKEN, SLACK_APP_TOKEN
+from config import SLACK_BOT_TOKEN, SLACK_APP_TOKEN, ALLOWED_USER_IDS
 from jira_handler import JiraHandler
 from report_generator import ReportGenerator
 from legacy_runner import run_legacy
@@ -29,6 +29,18 @@ def handle_jira_report(ack, body, client):
 
     user_id = body.get('user_id')
     channel_id = body.get('channel_id')
+
+    # Access control: only allow specific users
+    if ALLOWED_USER_IDS and user_id not in ALLOWED_USER_IDS:
+        try:
+            client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                text="❌ You are not authorized to run this command."
+            )
+        except SlackApiError as e:
+            logger.warning(f"Failed to send unauthorized notification: {e.response['error']}")
+        return
 
     # Notify user that the report generation has started
     try:

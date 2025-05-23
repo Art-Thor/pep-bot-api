@@ -171,3 +171,6 @@ os.makedirs(CHART_DIR, exist_ok=True)
 # Whether to cache Jira API responses locally
 ENABLE_CACHING = os.getenv('ENABLE_CACHING', 'false').lower() == 'true'
 CACHE_TTL_SECONDS = int(os.getenv('CACHE_TTL_SECONDS', 3600))
+
+# === Access control ===
+ALLOWED_USER_IDS = os.getenv('ALLOWED_USER_IDS', '').split(',') if os.getenv('ALLOWED_USER_IDS') else []

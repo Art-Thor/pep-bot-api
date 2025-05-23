@@ -48,4 +48,62 @@ Use the `/jira-report` command in Slack to generate a weekly report. The bot wil
 - Namespace Analysis
 - Valid/Invalid Alerts Trends
 - Category Analytics
-- Priority Changes 
+- Priority Changes
+
+## Docker & Kubernetes Deployment
+
+### Build Docker Image
+
+```bash
+docker build -t jira-report-bot .
+```
+
+### Environment Variables
+
+The bot requires a `.env` file or environment variables for:
+- SLACK_BOT_TOKEN
+- SLACK_APP_TOKEN
+- JIRA_URL
+- JIRA_EMAIL
+- JIRA_API_TOKEN
+- ALLOWED_USER_IDS (comma-separated Slack user IDs)
+- (other config as needed)
+
+### Run with Docker
+
+```bash
+docker run --env-file .env jira-report-bot
+```
+
+### Kubernetes Example
+
+Create a Kubernetes Secret or ConfigMap with your .env variables, then use a Deployment like:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jira-report-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira-report-bot
+  template:
+    metadata:
+      labels:
+        app: jira-report-bot
+    spec:
+      containers:
+      - name: jira-report-bot
+        image: jira-report-bot:latest
+        envFrom:
+        - secretRef:
+            name: jira-report-bot-env
+        # or use configMapRef if not secret
+```
+
+**Note:**
+- This bot does not expose HTTP ports; it connects to Slack via Socket Mode.
+- Ensure outbound internet access for Slack and Jira API.
+- Only one replica is recommended unless you use distributed locks for Slack events. 
