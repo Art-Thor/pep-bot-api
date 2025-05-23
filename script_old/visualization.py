@@ -74,31 +74,42 @@ def create_figures_dir():
 
 def plot_priority_levels(df):
     """
-    Function to visualize the number of alerts by priority levels.
+    Function to visualize the number of alerts by priority levels, with categories: P1, P2, P3, Canceled, Duplicated.
     """
+    # Create 'Category' column
+    df = df.copy()
+    df['Category'] = None
+    df.loc[df['Priority Level'] == 'P1', 'Category'] = 'P1'
+    df.loc[df['Priority Level'] == 'P2', 'Category'] = 'P2'
+    df.loc[df['Priority Level'] == 'P3', 'Category'] = 'P3'
+    df.loc[df['status'].str.lower() == 'canceled', 'Category'] = 'Canceled'
+    df.loc[df['assignee'].str.lower() == 'oleg.kolomiets.contractor', 'Category'] = 'Duplicated'
+    # Only keep these categories
+    cat_order = ['P1', 'P2', 'P3', 'Canceled', 'Duplicated']
+    df = df[df['Category'].isin(cat_order)]
+    # Color map
+    cat_colors = {
+        'P1': '#FF0000',
+        'P2': '#FFA500',
+        'P3': '#FFFF00',
+        'Canceled': '#808080',
+        'Duplicated': '#00BFFF',
+    }
     plt.figure(figsize=(6, 4))
-    priority_order = ['P1', 'P2', 'P3', 'Cancelled', 'Other']
-
-    # Use 'hue' parameter for color assignment
     ax = sns.countplot(
         data=df,
-        x='Priority Level',
-        hue='Priority Level',
-        order=priority_order,
-        palette=priority_colors,
+        x='Category',
+        order=cat_order,
+        palette=cat_colors,
         dodge=False
     )
-
-    # Remove legend if it exists
     legend = ax.get_legend()
     if legend is not None:
         legend.remove()
-
     plt.title('Number of Alerts by Priority Levels')
-    plt.xlabel('Priority')
+    plt.xlabel('Category')
     plt.ylabel('Count')
     plt.tight_layout()
-
     return plt.gcf()
 
 def plot_alert_types_with_priority(df):
@@ -174,20 +185,32 @@ def plot_user_requests_by_priority(df):
 
 def plot_priority_pie(df):
     """
-    Function to create a pie chart of alert distribution by priority levels.
+    Function to create a pie chart of alert distribution by the new categories.
     """
-    priority_counts = df['Priority Level'].value_counts()
-    priority_labels = priority_counts.index
-
-    # Get colors for the priorities
-    colors = [priority_colors.get(label, '#95A5A6') for label in priority_labels]
-
+    df = df.copy()
+    df['Category'] = None
+    df.loc[df['Priority Level'] == 'P1', 'Category'] = 'P1'
+    df.loc[df['Priority Level'] == 'P2', 'Category'] = 'P2'
+    df.loc[df['Priority Level'] == 'P3', 'Category'] = 'P3'
+    df.loc[df['status'].str.lower() == 'canceled', 'Category'] = 'Canceled'
+    df.loc[df['assignee'].str.lower() == 'oleg.kolomiets.contractor', 'Category'] = 'Duplicated'
+    cat_order = ['P1', 'P2', 'P3', 'Canceled', 'Duplicated']
+    df = df[df['Category'].isin(cat_order)]
+    cat_colors = {
+        'P1': '#FF0000',
+        'P2': '#FFA500',
+        'P3': '#FFFF00',
+        'Canceled': '#808080',
+        'Duplicated': '#00BFFF',
+    }
+    counts = df['Category'].value_counts().reindex(cat_order, fill_value=0)
+    labels = counts.index
+    colors = [cat_colors.get(label, '#95A5A6') for label in labels]
     fig = plt.figure(figsize=(8, 8))
-    plt.pie(priority_counts, labels=priority_labels, colors=colors, autopct='%1.1f%%', startangle=140)
+    plt.pie(counts, labels=labels, colors=colors, autopct='%1.1f%%', startangle=140)
     plt.title('Alert Distribution by Priority Levels')
-    plt.axis('equal')  # Make the pie chart circular
+    plt.axis('equal')
     plt.tight_layout()
-
     return fig
 
 def plot_alert_types(df):
